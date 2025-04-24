@@ -1,310 +1,136 @@
--- Hyper Neon Hub para Blox Fruits (Update 24, Abril de 2025)
--- Script completo com interface Fluent, otimizado e seguro
--- Inclui Auto Farm, ESP de frutas, Auto Quest, teleporte, e mais
--- Use em uma conta alternativa para minimizar riscos de ban
-
--- Serviços do Roblox
+-- Serviços
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
+local TeleportService = game:GetService("TeleportService")
 local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TeleportService = game:GetService("TeleportService")
-local PathfindingService = game:GetService("PathfindingService")
-local Lighting = game:GetService("Lighting")
-local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
 
--- Garantir que o jogador esteja carregado
-LocalPlayer:WaitForChild("PlayerGui", 10)
-if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-    LocalPlayer.CharacterAdded:Wait()
-end
+-- Variáveis Locais
+local LocalPlayer = Players.LocalPlayer
+local lastServerHop = tick()
+local randomDelay = math.random(0.1, 0.5)
+local fakeInputInterval = math.random(0.5, 1)
+local serverHopInterval = 300
 
--- Carregar Biblioteca Fluent e Add-ons com Tratamento de Erros
-local Fluent = nil
-local success, result = pcall(function()
-    return loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-end)
-if success then
-    Fluent = result
-else
-    warn("Falha ao carregar Fluent: " .. tostring(result))
-    return
-end
-
-local SaveManager = nil
-success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-end)
-if success then
-    SaveManager = result
-else
-    warn("Falha ao carregar SaveManager: " .. tostring(result))
-end
-
-local InterfaceManager = nil
-success, result = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-end)
-if success then
-    InterfaceManager = result
-else
-    warn("Falha ao carregar InterfaceManager: " .. tostring(result))
-end
-
--- Tabela de Configurações
+-- Configurações Padrão
 local Config = {
     General = {
-        Team = "Pirates",
-        StealthMode = true,
+        StealthMode = false,
         AntiCheatBypass = true,
         PerformanceMode = false,
         AutoSaveSettings = true,
         NotificationEnabled = true,
+        Team = "Pirates"
     },
     Farm = {
         AutoFarmLevel = false,
         AutoFarmBoss = false,
-        SelectedBoss = "All",
-        AutoFarmAllBosses = false,
         AutoFarmMobs = false,
-        AutoFarmMaterial = false,
-        SelectedMaterial = "None",
-        MaterialHealthThreshold = 25,
-        AutoFarmMastery = false,
-        MasteryHealthThreshold = 25,
-        SelectedTool = "Blox Fruit",
-        AutoCollectChests = false,
-        AutoCollectFragments = false,
-        AutoFarmMoney = false,
+        SelectedBoss = "Hydra Boss",
+        SelectedMob = "Royal Soldier",
+        SafeDistance = 10
+    },
+    Combat = {
+        ESPEnabled = false,
+        ESPColor = Color3.fromRGB(255, 0, 0),
+        ESPDistance = 1000,
+        AimBotEnabled = false,
+        AimBotFOV = 100
     },
     Quests = {
         AutoQuest = false,
-        SelectedQuestNPC = "None",
-        AutoDojoQuest = false,
-        AutoDracoRace = false,
-        AutoRaceV4 = false,
-        AutoTrial = false,
-        AutoAwakening = false,
-        AutoPole = false,
-        AutoSaber = false,
-        AutoSawSword = false,
-    },
-    Combat = {
-        FastAttack = false,
-        AutoSkills = false,
-        AimbotEnabled = false,
-        AimbotRange = 50,
-        AimbotSmoothness = 0.5,
-        ESPFruits = false,
-        ESPEnemies = false,
-        ESPColor = Color3.fromRGB(255, 0, 0),
-        ESPDistance = 1000,
-        AutoKillAura = false,
-        KillAuraRange = 20,
-        AutoDodge = false,
-        DodgeThreshold = 30,
+        SelectedNPC = "Quest Giver"
     },
     Fruits = {
         AutoCollectFruits = false,
-        AutoStoreFruits = false,
-        AutoRandomFruit = false,
-        FruitSniper = false,
-        AutoGasFruit = false,
-        AutoDragonTokens = false,
-        AutoFruitMastery = false,
-        FruitMasteryThreshold = 25,
+        AutoStoreFruits = false
     },
     Raids = {
         AutoRaid = false,
-       _SELECTEDRaid = "Normal",
-        AutoSeaEvent = false,
-        AutoTerrorshark = false,
-        AutoMirageIsland = false,
-        AutoKitsuneEvent = false,
-        AutoLeviathan = false,
-        AutoDragonEvent = false,
-        AutoHydraEvent = false,
+        SelectedRaid = "Law Raid"
     },
     Teleport = {
-        AutoTeleport = false,
-        SelectedIsland = "Hydra Island",
-        AutoSafeZone = false,
-        SafeZoneHeight = 200,
+        NoClip = false,
+        TeleportToIsland = false,
+        SelectedIsland = "Windmill"
     },
     Visuals = {
         RemoveFog = false,
-        FullBright = false,
-        FPSBoost = false,
-        CustomFOV = false,
-        FOVValue = 90,
-        ShowHitbox = false,
+        FullBright = false
     },
     Stats = {
         AutoStats = false,
-        StatAllocation = "Melee",
-        AutoHaki = false,
         SpeedHack = false,
-        WalkSpeed = 100,
         JumpPowerHack = false,
-        JumpPower = 50,
+        AutoHaki = false,
         AutoDefense = false,
         DefenseThreshold = 30,
+        SpeedValue = 50,
+        JumpPowerValue = 50
     },
     Shop = {
         AutoBuyWeapons = false,
-        SelectedWeapon = "Saber",
         AutoBuyAccessories = false,
         AutoBuyFruits = false,
         AutoBuyHakiColors = false,
+        SelectedWeapon = "Saber"
     },
     Misc = {
         ServerHop = false,
-        ServerHopInterval = 600,
-        SafeMode = true,
+        ServerHopInterval = 300,
+        SafeMode = false,
         PanicMode = false,
-        AntiAFK = true,
-        AutoRejoin = true,
+        AntiAFK = false,
+        AutoRejoin = false,
         AutoDisconnect = false,
-        DisconnectThreshold = 15,
+        DisconnectThreshold = 20
     },
     Automation = {
         AutoEquipBestWeapon = false,
         AutoEquipBestFruit = false,
         AutoTradeFruits = false,
-        AutoDropItems = false,
+        AutoDropItems = false
     },
     Events = {
         PredictMirageSpawn = false,
         PredictKitsuneSpawn = false,
-        PredictRaidSpawn = false,
-    },
+        PredictRaidSpawn = false
+    }
 }
 
--- Variáveis de Anti-Cheat
-local randomDelay = math.random(0.1, 0.5)
-local lastTeleport = tick()
-local teleportCooldown = 1.5
-local fakeInputInterval = math.random(5, 15)
-local lastServerHop = tick()
-local serverHopInterval = Config.Misc.ServerHopInterval
-local staffList = {"Roblox", "admin", "mod", "dev"}
-local lastStealthCheck = tick()
-local stealthCheckInterval = 30
-local espInstances = {}
-
--- Variáveis de Desempenho
-local lastFPSCheck = tick()
-local fpsCheckInterval = 5
-local currentFPS = 60
-local performanceThreshold = 30
-
--- Sistema de Logs
-local Logs = {}
-local function logMessage(message)
-    table.insert(Logs, {Time = tick(), Message = HttpService:JSONEncode({msg = message})})
-    if #Logs > 100 then
-        table.remove(Logs, 1)
-    end
-end
-
--- Sistema de Notificações
+-- Funções Auxiliares
 local function notify(title, content, duration)
-    if not Config.General.NotificationEnabled then return end
-    Fluent:Notify({
-        Title = title,
-        Content = content,
-        Duration = duration or 5
-    })
-end
-
--- Funções Utilitárias
-local function safeTeleport(cframe)
-    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") or Config.General.StealthMode then
-        return false
-    end
-    if tick() - lastTeleport < teleportCooldown then
-        return false
-    }
-    if #Players:GetPlayers() > 10 and Config.General.StealthMode then
-        logMessage("Pausado: Servidor lotado")
-        notify("Hyper Neon Hub", "Pausado: Servidor lotado", 3)
-        return false
-    }
-    local success, result = pcall(function()
-        local tween = TweenService:Create(
-            LocalPlayer.Character.HumanoidRootPart,
-            TweenInfo.new(math.random(5, 15) / 10, Enum.EasingStyle.Sine),
-            {CFrame = cframe}
-        )
-        tween:Play()
-        tween.Completed:Wait()
-        lastTeleport = tick()
-        return true
-    end)
-    if not success then
-        logMessage("Falha no teleporte: " .. tostring(result))
-        notify("Hyper Neon Hub", "Falha no teleporte: " .. tostring(result), 3)
-        return false
-    end
-    return true
-end
-
-local function getNearestEnemy()
-    local closest, distance = nil, math.huge
-    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-            local dist = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            if dist < distance then
-                closest = enemy
-                distance = dist
-            end
-        end
-    end
-    return closest, distance
-end
-
-local function attackEnemy(enemy)
-    if not enemy or not enemy.Humanoid or enemy.Humanoid.Health <= 0 then return end
-    safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
-    wait(randomDelay)
-end
-
-local function followEnemy(enemy)
-    if not enemy or not enemy.Humanoid or enemy.Humanoid.Health <= 0 then return end
-    while (Config.Farm.AutoFarmBoss or Config.Farm.AutoFarmAllBosses or Config.Farm.AutoFarmMobs or Config.Farm.AutoFarmLevel) and enemy.Parent and enemy.Humanoid.Health > 0 do
-        if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then break end
-        safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-        attackEnemy(enemy)
-        wait(0.1)
+    if Config.General.NotificationEnabled then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title,
+            Text = content,
+            Duration = duration or 5
+        })
     end
 end
 
-local function panicModeCheck()
-    if Config.Misc.PanicMode and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-        if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * 0.3 then
-            safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, Config.Teleport.SafeZoneHeight, 0))
-            logMessage("Modo Pânico: Fugindo...")
-            notify("Hyper Neon Hub", "Modo Pânico: Fugindo...", 5)
-            wait(5)
+local function logMessage(message)
+    print("[Hyper Neon Hub] " .. message)
+end
+
+local function checkCrowdedServer()
+    return #Players:GetPlayers() > 15
+end
+
+local function checkStaffPresence()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player:GetRankInGroup(game.CreatorId) > 1 then
             return true
         end
     end
     return false
 end
 
-local function checkCrowdedServer()
-    return #Players:GetPlayers() > 10
-end
-
 local function checkProximity()
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        if player ~= LocalPlayer and player.Character and LocalPlayer.Character then
             local distance = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
             if distance < 50 then
                 return true
@@ -314,92 +140,79 @@ local function checkProximity()
     return false
 end
 
-local function checkStaffPresence()
-    if tick() - lastStealthCheck < stealthCheckInterval then return false end
-    lastStealthCheck = tick()
-    for _, player in pairs(Players:GetPlayers()) do
-        if table.find(staffList, player.Name:lower()) then
-            logMessage("Staff detectado: " .. player.Name)
-            notify("Hyper Neon Hub", "Staff detectado: " .. player.Name, 5)
-            return true
-        end
+local function panicModeCheck()
+    return Config.Misc.PanicMode
+end
+
+local function updatePerformance()
+    if Config.General.PerformanceMode then
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
     end
-    return false
 end
 
 local function mimicBehavior()
-    pcall(function()
+    if Config.General.StealthMode then
         VirtualUser:CaptureController()
         VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
-        VirtualUser:Button1Down(Vector2.new(math.random(0, 100), math.random(0, 100)))
-        VirtualUser:Button1Up(Vector2.new(math.random(0, 100), math.random(0, 100)))
-        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid:Move(Vector3.new(math.random(-1, 1), 0, math.random(-1, 1)))
-            if math.random() < 0.3 then
-                LocalPlayer.Character.Humanoid.Jump = true
+    end
+end
+
+-- Função para atacar inimigos com verificação de Humanoid
+local function attackEnemy(enemy)
+    if not enemy or not enemy:IsA("Model") then return end
+    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local enemyPos = enemy:FindFirstChild("HumanoidRootPart") and enemy.HumanoidRootPart.Position or enemy.Position
+            local safePos = enemyPos + Vector3.new(0, Config.Farm.SafeDistance, 0)
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(safePos, enemyPos)
+
+            if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("SetAttack", enemy)
             end
         end
     end)
 end
 
-local function updatePerformance()
-    if tick() - lastFPSCheck < fpsCheckInterval then return end
-    lastFPSCheck = tick()
-    currentFPS = 1 / RunService.RenderStepped:Wait()
-    if currentFPS < performanceThreshold and not Config.General.PerformanceMode then
-        Config.General.PerformanceMode = true
-        logMessage("Modo de Desempenho ativado: FPS muito baixo")
-        notify("Hyper Neon Hub", "Modo de Desempenho ativado: FPS muito baixo", 5)
-    elseif currentFPS > performanceThreshold * 1.5 and Config.General.PerformanceMode then
-        Config.General.PerformanceMode = false
-        logMessage("Modo de Desempenho desativado")
-        notify("Hyper Neon Hub", "Modo de Desempenho desativado", 5)
-    end
-end
+-- Carregar Fluent
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
--- Interface Fluent
+-- Criar Interface
 local Window = Fluent:CreateWindow({
     Title = "Hyper Neon Hub | Blox Fruits",
-    SubTitle = "Update 24 - Abril 2025",
+    SubTitle = "by xAI",
     TabWidth = 160,
-    Size = UDim2.fromOffset(600, 500),
-    Acrylic = false,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Main = Window:AddTab({ Title = "Principal", Icon = "home" }),
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
     Farm = Window:AddTab({ Title = "Farm", Icon = "wheat" }),
-    Combat = Window:AddTab({ Title = "Combate", Icon = "sword" }),
-    Quests = Window:AddTab({ Title = "Missões", Icon = "scroll" }),
-    Fruits = Window:AddTab({ Title = "Frutas", Icon = "apple" }),
-    Raids = Window:AddTab({ Title = "Raids", Icon = "shield" }),
-    Teleport = Window:AddTab({ Title = "Teleporte", Icon = "map-pin" }),
-    Visuals = Window:AddTab({ Title = "Visuais", Icon = "eye" }),
-    Stats = Window:AddTab({ Title = "Stats", Icon = "bar-chart" }),
-    Shop = Window:AddTab({ Title = "Loja", Icon = "shopping-cart" }),
-    Misc = Window:AddTab({ Title = "Diversos", Icon = "settings" }),
-    Automation = Window:AddTab({ Title = "Automação", Icon = "cog" }),
-    Events = Window:AddTab({ Title = "Eventos", Icon = "calendar" }),
-    Settings = Window:AddTab({ Title = "Configurações", Icon = "settings" })
+    Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
+    Quests = Window:AddTab({ Title = "Quests", Icon = "scroll" }),
+    Fruits = Window:AddTab({ Title = "Fruits", Icon = "apple" }),
+    Raids = Window:AddTab({ Title = "Raids", Icon = "zap" }),
+    Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" }),
+    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Stats = Window:AddTab({ Title = "Stats", Icon = "bar-chart-2" }),
+    Shop = Window:AddTab({ Title = "Shop", Icon = "shopping-cart" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
+    Automation = Window:AddTab({ Title = "Automation", Icon = "bot" }),
+    Events = Window:AddTab({ Title = "Events", Icon = "calendar" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "sliders" })
 }
 
-local Options = Fluent.Options
-
--- Aba Principal
+-- Aba Main
 Tabs.Main:AddParagraph({
     Title = "Bem-vindo ao Hyper Neon Hub!",
-    Content = "Este script oferece funcionalidades avançadas para Blox Fruits.\nUse as abas para configurar as opções."
-})
-
-Tabs.Main:AddButton({
-    Title = "Copiar Link do Discord",
-    Description = "Junte-se ao nosso servidor do Discord!",
-    Callback = function()
-        setclipboard("https://discord.gg/hyperneonhub")
-        notify("Hyper Neon Hub", "Link do Discord copiado!", 3)
-    end
+    Content = "Este script oferece diversas funcionalidades para o Blox Fruits. Use as abas para configurar as opções."
 })
 
 -- Aba Farm
@@ -415,19 +228,13 @@ Tabs.Farm:AddToggle("AutoFarmLevel", {
         Config.Farm.AutoFarmLevel = state
         if state then
             spawn(function()
-                while Config.Farm.AutoFarmLevel and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                while Config.Farm.AutoFarmLevel and LocalPlayer.Character do
                     if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    local enemy, distance = getNearestEnemy()
-                    if enemy then
-                        if distance > 50 then
-                            safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                        else
-                            followEnemy(enemy)
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy.Name:find("Royal Soldier") and enemy:IsA("Model") then
+                            attackEnemy(enemy)
+                            wait(randomDelay)
                         end
-                    else
-                        logMessage("Procurando inimigos...")
-                        notify("Hyper Neon Hub", "Procurando inimigos...", 2)
-                        mimicBehavior()
                     end
                     wait(0.1)
                 end
@@ -443,22 +250,14 @@ Tabs.Farm:AddToggle("AutoFarmBoss", {
         Config.Farm.AutoFarmBoss = state
         if state then
             spawn(function()
-                while Config.Farm.AutoFarmBoss and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                while Config.Farm.AutoFarmBoss and LocalPlayer.Character do
                     if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
                     for _, boss in pairs(workspace.Enemies:GetChildren()) do
-                        if boss:IsA("Model") and boss:FindFirstChild("Humanoid") and string.find(boss.Name, "Boss") and (Config.Farm.SelectedBoss == "All" or boss.Name == Config.Farm.SelectedBoss) then
-                            local distance = (boss.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(boss.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(boss)
-                            end
+                        if boss.Name == Config.Farm.SelectedBoss and boss:IsA("Model") then
+                            attackEnemy(boss)
                             wait(randomDelay)
                         end
                     end
-                    logMessage("Procurando bosses...")
-                    notify("Hyper Neon Hub", "Procurando bosses...", 2)
-                    mimicBehavior()
                     wait(0.1)
                 end
             end)
@@ -468,41 +267,11 @@ Tabs.Farm:AddToggle("AutoFarmBoss", {
 
 Tabs.Farm:AddDropdown("SelectedBoss", {
     Title = "Selecionar Boss",
-    Values = {"All", "Hydra Boss", "Dragon Boss", "Terrorshark", "Leviathan", "Kitsune", "Sea King"},
+    Values = {"Hydra Boss", "Terrorshark", "Leviathan", "Dragon Boss"},
     Multi = false,
     Default = Config.Farm.SelectedBoss,
     Callback = function(value)
         Config.Farm.SelectedBoss = value
-    end
-})
-
-Tabs.Farm:AddToggle("AutoFarmAllBosses", {
-    Title = "Auto Farm Todos os Bosses",
-    Default = Config.Farm.AutoFarmAllBosses,
-    Callback = function(state)
-        Config.Farm.AutoFarmAllBosses = state
-        if state then
-            spawn(function()
-                while Config.Farm.AutoFarmAllBosses and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, boss in pairs(workspace.Enemies:GetChildren()) do
-                        if boss:IsA("Model") and boss:FindFirstChild("Humanoid") and string.find(boss.Name, "Boss") then
-                            local distance = (boss.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(boss.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(boss)
-                            end
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Farmando todos os bosses...")
-                    notify("Hyper Neon Hub", "Farmando todos os bosses...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
     end
 })
 
@@ -513,22 +282,14 @@ Tabs.Farm:AddToggle("AutoFarmMobs", {
         Config.Farm.AutoFarmMobs = state
         if state then
             spawn(function()
-                while Config.Farm.AutoFarmMobs and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                while Config.Farm.AutoFarmMobs and LocalPlayer.Character do
                     if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
                     for _, mob in pairs(workspace.Enemies:GetChildren()) do
-                        if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and not string.find(mob.Name, "Boss") then
-                            local distance = (mob.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(mob.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(mob)
-                            end
+                        if mob.Name == Config.Farm.SelectedMob and mob:IsA("Model") then
+                            attackEnemy(mob)
                             wait(randomDelay)
                         end
                     end
-                    logMessage("Farmando mobs...")
-notify("Hyper Neon Hub", "Farmando mobs...", 2)
-                    mimicBehavior()
                     wait(0.1)
                 end
             end)
@@ -536,359 +297,82 @@ notify("Hyper Neon Hub", "Farmando mobs...", 2)
     end
 })
 
-Tabs.Farm:AddToggle("AutoFarmMaterial", {
-    Title = "Auto Farm Material",
-    Default = Config.Farm.AutoFarmMaterial,
-    Callback = function(state)
-        Config.Farm.AutoFarmMaterial = state
-        if state then
-            spawn(function()
-                while Config.Farm.AutoFarmMaterial and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy.Humanoid.Health <= enemy.Humanoid.MaxHealth * (Config.Farm.MaterialHealthThreshold / 100) then
-                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(enemy)
-                            end
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Farmando material...")
-                    notify("Hyper Neon Hub", "Farmando material...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Farm:AddSlider("MaterialHealthThreshold", {
-    Title = "Limiar de Vida para Material",
-    Description = "Percentual de vida do inimigo para farm de material",
-    Min = 1,
-    Max = 100,
-    Default = Config.Farm.MaterialHealthThreshold,
-    Callback = function(value)
-        Config.Farm.MaterialHealthThreshold = value
-    end
-})
-
-Tabs.Farm:AddToggle("AutoFarmMastery", {
-    Title = "Auto Farm Maestria",
-    Default = Config.Farm.AutoFarmMastery,
-    Callback = function(state)
-        Config.Farm.AutoFarmMastery = state
-        if state then
-            spawn(function()
-                while Config.Farm.AutoFarmMastery and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy.Humanoid.Health <= enemy.Humanoid.MaxHealth * (Config.Farm.MasteryHealthThreshold / 100) then
-                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(enemy)
-                            end
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Farmando maestria...")
-                    notify("Hyper Neon Hub", "Farmando maestria...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Farm:AddSlider("MasteryHealthThreshold", {
-    Title = "Limiar de Vida para Maestria",
-    Description = "Percentual de vida do inimigo para farm de maestria",
-    Min = 1,
-    Max = 100,
-    Default = Config.Farm.MasteryHealthThreshold,
-    Callback = function(value)
-        Config.Farm.MasteryHealthThreshold = value
-    end
-})
-
-Tabs.Farm:AddDropdown("SelectedTool", {
-    Title = "Ferramenta para Maestria",
-    Values = {"Blox Fruit", "Melee", "Sword", "Gun"},
+Tabs.Farm:AddDropdown("SelectedMob", {
+    Title = "Selecionar Mob",
+    Values = {"Royal Soldier", "Fishman Warrior", "Pirate", "Bandit"},
     Multi = false,
-    Default = Config.Farm.SelectedTool,
+    Default = Config.Farm.SelectedMob,
     Callback = function(value)
-        Config.Farm.SelectedTool = value
+        Config.Farm.SelectedMob = value
     end
 })
 
-Tabs.Farm:AddToggle("AutoCollectChests", {
-    Title = "Auto Coletar Baús",
-    Default = Config.Farm.AutoCollectChests,
-    Callback = function(state)
-        Config.Farm.AutoCollectChests = state
-        if state then
-            spawn(function()
-                while Config.Farm.AutoCollectChests and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, chest in pairs(workspace:GetChildren()) do
-                        if chest:IsA("Model") and string.find(chest.Name, "Chest") then
-                            safeTeleport(chest:GetPrimaryPart().CFrame)
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Coletando baús...")
-                    notify("Hyper Neon Hub", "Coletando baús...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Farm:AddToggle("AutoCollectFragments", {
-    Title = "Auto Coletar Fragmentos",
-    Default = Config.Farm.AutoCollectFragments,
-    Callback = function(state)
-        Config.Farm.AutoCollectFragments = state
-        if state then
-            spawn(function()
-                while Config.Farm.AutoCollectFragments and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, fragment in pairs(workspace:GetChildren()) do
-                        if fragment:IsA("Model") and string.find(fragment.Name, "Fragment") then
-                            safeTeleport(fragment:GetPrimaryPart().CFrame)
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Coletando fragmentos...")
-                    notify("Hyper Neon Hub", "Coletando fragmentos...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Farm:AddToggle("AutoFarmMoney", {
-    Title = "Auto Farm Dinheiro",
-    Default = Config.Farm.AutoFarmMoney,
-    Callback = function(state)
-        Config.Farm.AutoFarmMoney = state
-        if state then
-            spawn(function()
-                while Config.Farm.AutoFarmMoney and LocalPlayer.Character do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("MoneyFarm", math.random(1, 1000))
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
+Tabs.Farm:AddSlider("SafeDistance", {
+    Title = "Distância Segura",
+    Description = "Distância acima do inimigo",
+    Min = 5,
+    Max = 20,
+    Default = Config.Farm.SafeDistance,
+    Callback = function(value)
+        Config.Farm.SafeDistance = value
     end
 })
 
 -- Aba Combat
 Tabs.Combat:AddParagraph({
     Title = "Opções de Combate",
-    Content = "Configure as opções de combate e ESP."
+    Content = "Configure as opções de combate."
 })
 
-Tabs.Combat:AddToggle("FastAttack", {
-    Title = "Ataque Rápido",
-    Default = Config.Combat.FastAttack,
+Tabs.Combat:AddToggle("ESPEnabled", {
+    Title = "ESP de Frutas",
+    Default = Config.Combat.ESPEnabled,
     Callback = function(state)
-        Config.Combat.FastAttack = state
-        if state then
-            spawn(function()
-                while Config.Combat.FastAttack and LocalPlayer.Character do
-                    VirtualUser:CaptureController()
-                    VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
-                    wait(0.05)
+        Config.Combat.ESPEnabled = state
+        if not state then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:FindFirstChild("ESP_HyperNeon") then
+                    v.ESP_HyperNeon:Destroy()
                 end
-            end)
-        end
-    end
-})
-
-Tabs.Combat:AddToggle("AutoSkills", {
-    Title = "Habilidades Automáticas",
-    Default = Config.Combat.AutoSkills,
-    Callback = function(state)
-        Config.Combat.AutoSkills = state
-        if state then
+            end
+        else
             spawn(function()
-                while Config.Combat.AutoSkills and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("UseSkill", math.random(1, 1000))
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Combat:AddToggle("AimbotEnabled", {
-    Title = "Aimbot",
-    Default = Config.Combat.AimbotEnabled,
-    Callback = function(state)
-        Config.Combat.AimbotEnabled = state
-        if state then
-            spawn(function()
-                while Config.Combat.AimbotEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    local closest, distance = getNearestEnemy()
-                    if closest and closest.HumanoidRootPart and distance <= Config.Combat.AimbotRange then
-                        local camera = workspace.CurrentCamera
-                        local targetPos = closest.HumanoidRootPart.Position
-                        local currentPos = camera.CFrame.Position
-                        local newLookAt = currentPos:Lerp(targetPos, Config.Combat.AimbotSmoothness)
-                        camera.CFrame = CFrame.new(camera.CFrame.Position, newLookAt)
-                    end
-                    wait()
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Combat:AddSlider("AimbotRange", {
-    Title = "Alcance do Aimbot",
-    Description = "Distância máxima para o aimbot funcionar",
-    Min = 10,
-    Max = 100,
-    Default = Config.Combat.AimbotRange,
-    Callback = function(value)
-        Config.Combat.AimbotRange = value
-    end
-})
-
-Tabs.Combat:AddSlider("AimbotSmoothness", {
-    Title = "Suavidade do Aimbot",
-    Description = "Quão suave é o movimento do aimbot (0 a 1)",
-    Min = 0,
-    Max = 1,
-    Default = Config.Combat.AimbotSmoothness,
-    Callback = function(value)
-        Config.Combat.AimbotSmoothness = value
-    end
-})
-
-Tabs.Combat:AddToggle("ESPFruits", {
-    Title = "ESP Frutas",
-    Default = Config.Combat.ESPFruits,
-    Callback = function(state)
-        Config.Combat.ESPFruits = state
-        if state then
-            spawn(function()
-                while Config.Combat.ESPFruits do
-                    if Config.General.PerformanceMode then wait(1) else wait(0.5) end
-                    for _, fruit in pairs(workspace:GetChildren()) do
-                        if fruit:IsA("Tool") and string.find(fruit.Name, "Fruit") then
-                            local handle = fruit:FindFirstChild("Handle")
-                            if handle then
-                                local distance = (handle.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                                if distance > Config.Combat.ESPDistance then continue end
-                                local billboard = espInstances[fruit] or Instance.new("BillboardGui")
-                                billboard.Name = "HyperNeonESP"
+                while Config.Combat.ESPEnabled do
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        if (v.Name:find("Fruit") or v.Name:find("DevilFruit")) and not v.Name:find("sail_boat2") and not v:FindFirstChild("ESP_HyperNeon") then
+                            pcall(function()
+                                local billboard = Instance.new("BillboardGui", v)
+                                billboard.Name = "ESP_HyperNeon"
                                 billboard.Size = UDim2.new(0, 100, 0, 30)
-                                billboard.Adornee = handle
+                                billboard.StudsOffset = Vector3.new(0, 3, 0)
                                 billboard.AlwaysOnTop = true
-                                billboard.Parent = fruit
 
-                                local text = billboard:FindFirstChild("ESPText") or Instance.new("TextLabel")
-                                text.Name = "ESPText"
-                                text.Size = UDim2.new(1, 0, 1, 0)
-                                text.BackgroundTransparency = 1
-                                text.Text = fruit.Name
-                                text.TextColor3 = Config.Combat.ESPColor
-                                text.TextScaled = true
-                                text.Parent = billboard
+                                local textLabel = Instance.new("TextLabel", billboard)
+                                textLabel.Size = UDim2.new(1, 0, 1, 0)
+                                textLabel.BackgroundTransparency = 1
+                                textLabel.Text = v.Name
+                                textLabel.TextColor3 = Config.Combat.ESPColor
+                                textLabel.TextScaled = true
 
-                                espInstances[fruit] = billboard
-                            end
+                                spawn(function()
+                                    while Config.Combat.ESPEnabled and v and v.Parent and LocalPlayer.Character do
+                                        local distance = (v.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                                        textLabel.Text = v.Name .. " (" .. math.floor(distance) .. " studs)"
+                                        wait(0.1)
+                                    end
+                                    if billboard then billboard:Destroy() end
+                                end)
+                            end)
                         end
                     end
+                    wait(1)
                 end
             end)
-        else
-            for fruit, billboard in pairs(espInstances) do
-                if billboard and billboard.Parent then
-                    billboard:Destroy()
-                end
-            end
-            table.clear(espInstances)
         end
     end
 })
 
-Tabs.Combat:AddToggle("ESPEnemies", {
-    Title = "ESP Inimigos",
-    Default = Config.Combat.ESPEnemies,
-    Callback = function(state)
-        Config.Combat.ESPEnemies = state
-        if state then
-            spawn(function()
-                while Config.Combat.ESPEnemies do
-                    if Config.General.PerformanceMode then wait(1) else wait(0.5) end
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > Config.Combat.ESPDistance then continue end
-                            local billboard = espInstances[enemy] or Instance.new("BillboardGui")
-                            billboard.Name = "HyperNeonESP"
-                            billboard.Size = UDim2.new(0, 100, 0, 30)
-                            billboard.Adornee = enemy.HumanoidRootPart
-                            billboard.AlwaysOnTop = true
-                            billboard.Parent = enemy
-
-                            local text = billboard:FindFirstChild("ESPText") or Instance.new("TextLabel")
-                            text.Name = "ESPText"
-                            text.Size = UDim2.new(1, 0, 1, 0)
-                            text.BackgroundTransparency = 1
-                            text.Text = enemy.Name
-                            text.TextColor3 = Config.Combat.ESPColor
-                            text.TextScaled = true
-                            text.Parent = billboard
-
-                            if Config.Visuals.ShowHitbox then
-                                local highlight = enemy:FindFirstChild("HyperNeonHighlight") or Instance.new("Highlight")
-                                highlight.Name = "HyperNeonHighlight"
-                                highlight.FillColor = Config.Combat.ESPColor
-                                highlight.OutlineColor = Config.Combat.ESPColor
-                                highlight.Parent = enemy
-                            end
-
-                            espInstances[enemy] = billboard
-                        end
-                    end
-                end
-            end)
-        else
-            for enemy, billboard in pairs(espInstances) do
-                if billboard and billboard.Parent then
-                    billboard:Destroy()
-                end
-            end
-            table.clear(espInstances)
-        end
-    end
-})
-
-Tabs.Combat:AddColorpicker("ESPColor", {
+Tabs.Combat:AddColorPicker("ESPColor", {
     Title = "Cor do ESP",
     Default = Config.Combat.ESPColor,
     Callback = function(value)
@@ -897,8 +381,8 @@ Tabs.Combat:AddColorpicker("ESPColor", {
 })
 
 Tabs.Combat:AddSlider("ESPDistance", {
-    Title = "Distância do ESP",
-    Description = "Distância máxima para o ESP funcionar",
+    Title = "Distância Máxima do ESP",
+    Description = "Distância máxima para exibir o ESP",
     Min = 100,
     Max = 5000,
     Default = Config.Combat.ESPDistance,
@@ -907,71 +391,47 @@ Tabs.Combat:AddSlider("ESPDistance", {
     end
 })
 
-Tabs.Combat:AddToggle("AutoKillAura", {
-    Title = "Kill Aura",
-    Default = Config.Combat.AutoKillAura,
+Tabs.Combat:AddToggle("AimBotEnabled", {
+    Title = "AimBot",
+    Default = Config.Combat.AimBotEnabled,
     Callback = function(state)
-        Config.Combat.AutoKillAura = state
+        Config.Combat.AimBotEnabled = state
         if state then
             spawn(function()
-                while Config.Combat.AutoKillAura and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                while Config.Combat.AimBotEnabled and LocalPlayer.Character do
+                    local closestEnemy = nil
+                    local closestDistance = Config.Combat.AimBotFOV
                     for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                        local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+                        if humanoid and humanoid.Health > 0 and LocalPlayer.Character then
                             local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance <= Config.Combat.KillAuraRange then
-                                attackEnemy(enemy)
-                                wait(randomDelay)
+                            if distance <= closestDistance then
+                                closestDistance = distance
+                                closestEnemy = enemy
                             end
                         end
                     end
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Combat:AddSlider("KillAuraRange", {
-    Title = "Alcance da Kill Aura",
-    Description = "Distância máxima para a kill aura atacar",
-    Min = 5,
-    Max = 50,
-    Default = Config.Combat.KillAuraRange,
-    Callback = function(value)
-        Config.Combat.KillAuraRange = value
-    end
-})
-
-Tabs.Combat:AddToggle("AutoDodge", {
-    Title = "Esquiva Automática",
-    Default = Config.Combat.AutoDodge,
-    Callback = function(state)
-        Config.Combat.AutoDodge = state
-        if state then
-            spawn(function()
-                while Config.Combat.AutoDodge and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") do
-                    if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * (Config.Combat.DodgeThreshold / 100) then
-                        safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(math.random(-10, 10), 0, math.random(-10, 10)))
-                        logMessage("Esquivando...")
-                        notify("Hyper Neon Hub", "Esquivando...", 3)
-                        wait(randomDelay)
+                    if closestEnemy then
+                        pcall(function()
+                            local camera = workspace.CurrentCamera
+                            camera.CFrame = CFrame.new(camera.CFrame.Position, closestEnemy.HumanoidRootPart.Position)
+                        end)
                     end
-                    wait(0.1)
+                    wait(0.05)
                 end
             end)
         end
     end
 })
 
-Tabs.Combat:AddSlider("DodgeThreshold", {
-    Title = "Limiar de Vida para Esquiva",
-    Description = "Percentual de vida para ativar a esquiva",
-    Min = 1,
-    Max = 100,
-    Default = Config.Combat.DodgeThreshold,
+Tabs.Combat:AddSlider("AimBotFOV", {
+    Title = "FOV do AimBot",
+    Description = "Campo de visão do AimBot",
+    Min = 50,
+    Max = 500,
+    Default = Config.Combat.AimBotFOV,
     Callback = function(value)
-        Config.Combat.DodgeThreshold = value
+        Config.Combat.AimBotFOV = value
     end
 })
 
@@ -982,210 +442,47 @@ Tabs.Quests:AddParagraph({
 })
 
 Tabs.Quests:AddToggle("AutoQuest", {
-    Title = "Auto Aceitar Missões",
+    Title = "Auto Quest",
     Default = Config.Quests.AutoQuest,
     Callback = function(state)
         Config.Quests.AutoQuest = state
         if state then
             spawn(function()
-                while Config.Quests.AutoQuest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                while Config.Quests.AutoQuest and LocalPlayer.Character do
                     if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
                     for _, npc in pairs(workspace.NPCs:GetChildren()) do
-                        if npc:IsA("Model") and npc:FindFirstChild("Humanoid") and (Config.Quests.SelectedQuestNPC == "None" or npc.Name == Config.Quests.SelectedQuestNPC) then
-                            local distance = (npc.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                                                  if distance > 10 then
-                                safeTeleport(npc.HumanoidRootPart.CFrame * CFrame.new(0, 5, -5))
-                            else
-                                VirtualUser:CaptureController()
-                                VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
-                            end
+                        if npc.Name == Config.Quests.SelectedNPC and npc:IsA("Model") then
+                            pcall(function()
+                                local npcPos = npc:FindFirstChild("HumanoidRootPart") and npc.HumanoidRootPart.Position or npc.Position
+                                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(npcPos + Vector3.new(0, 5, 0))
+                                if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", npc.Name)
+                                end
+                            end)
                             wait(randomDelay)
                         end
                     end
-                    logMessage("Aceitando missões...")
-                    notify("Hyper Neon Hub", "Aceitando missões...", 2)
-                    mimicBehavior()
-                    wait(0.1)
+                    wait(0.5)
                 end
             end)
         end
     end
 })
 
-Tabs.Quests:AddDropdown("SelectedQuestNPC", {
-    Title = "Selecionar NPC de Missão",
-    Values = {"None", "Quest Giver", "Elite Hunter", "Dojo Master", "Race Trainer", "Trial Master", "Awakening Expert"},
+Tabs.Quests:AddDropdown("SelectedNPC", {
+    Title = "Selecionar NPC",
+    Values = {"Quest Giver", "Elite Hunter", "Blox Fruit Dealer", "Sick Man"},
     Multi = false,
-    Default = Config.Quests.SelectedQuestNPC,
+    Default = Config.Quests.SelectedNPC,
     Callback = function(value)
-        Config.Quests.SelectedQuestNPC = value
-    end
-})
-
-Tabs.Quests:AddToggle("AutoDojoQuest", {
-    Title = "Auto Dojo Quest",
-    Default = Config.Quests.AutoDojoQuest,
-    Callback = function(state)
-        Config.Quests.AutoDojoQuest = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoDojoQuest and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("DojoQuest")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoDracoRace", {
-    Title = "Auto Draco Race",
-    Default = Config.Quests.AutoDracoRace,
-    Callback = function(state)
-        Config.Quests.AutoDracoRace = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoDracoRace and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("DracoRace")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoRaceV4", {
-    Title = "Auto Race V4",
-    Default = Config.Quests.AutoRaceV4,
-    Callback = function(state)
-        Config.Quests.AutoRaceV4 = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoRaceV4 and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("RaceV4")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoTrial", {
-    Title = "Auto Trial",
-    Default = Config.Quests.AutoTrial,
-    Callback = function(state)
-        Config.Quests.AutoTrial = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoTrial and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("StartTrial")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoAwakening", {
-    Title = "Auto Awakening",
-    Default = Config.Quests.AutoAwakening,
-    Callback = function(state)
-        Config.Quests.AutoAwakening = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoAwakening and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("Awakening")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoPole", {
-    Title = "Auto Pole",
-    Default = Config.Quests.AutoPole,
-    Callback = function(state)
-        Config.Quests.AutoPole = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoPole and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("PoleQuest")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoSaber", {
-    Title = "Auto Saber",
-    Default = Config.Quests.AutoSaber,
-    Callback = function(state)
-        Config.Quests.AutoSaber = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoSaber and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("SaberQuest")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Quests:AddToggle("AutoSawSword", {
-    Title = "Auto Saw Sword",
-    Default = Config.Quests.AutoSawSword,
-    Callback = function(state)
-        Config.Quests.AutoSawSword = state
-        if state then
-            spawn(function()
-                while Config.Quests.AutoSawSword and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("SawSwordQuest")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
+        Config.Quests.SelectedNPC = value
     end
 })
 
 -- Aba Fruits
 Tabs.Fruits:AddParagraph({
     Title = "Opções de Frutas",
-    Content = "Configure as opções de gerenciamento de frutas."
+    Content = "Configure as opções de coleta de frutas."
 })
 
 Tabs.Fruits:AddToggle("AutoCollectFruits", {
@@ -1195,18 +492,21 @@ Tabs.Fruits:AddToggle("AutoCollectFruits", {
         Config.Fruits.AutoCollectFruits = state
         if state then
             spawn(function()
-                while Config.Fruits.AutoCollectFruits and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                while Config.Fruits.AutoCollectFruits and LocalPlayer.Character do
                     if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, fruit in pairs(workspace:GetChildren()) do
-                        if fruit:IsA("Tool") and string.find(fruit.Name, "Fruit") then
-                            safeTeleport(fruit.Handle.CFrame)
+                    for _, fruit in pairs(workspace:GetDescendants()) do
+                        if (fruit.Name:find("Fruit") or fruit.Name:find("DevilFruit")) and not fruit.Name:find("sail_boat2") then
+                            pcall(function()
+                                local fruitPos = fruit.Position
+                                LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(fruitPos)
+                                if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("CollectFruit", fruit)
+                                end
+                            end)
                             wait(randomDelay)
                         end
                     end
-                    logMessage("Coletando frutas...")
-                    notify("Hyper Neon Hub", "Coletando frutas...", 2)
-                    mimicBehavior()
-                    wait(0.1)
+                    wait(0.5)
                 end
             end)
         end
@@ -1221,158 +521,23 @@ Tabs.Fruits:AddToggle("AutoStoreFruits", {
         if state then
             spawn(function()
                 while Config.Fruits.AutoStoreFruits and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
                     pcall(function()
                         if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("StoreFruit")
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("StoreAllFruits")
                         end
                     end)
                     wait(randomDelay)
                 end
             end)
         end
-    end
-})
-
-Tabs.Fruits:AddToggle("AutoRandomFruit", {
-    Title = "Auto Fruta Aleatória",
-    Default = Config.Fruits.AutoRandomFruit,
-    Callback = function(state)
-        Config.Fruits.AutoRandomFruit = state
-        if state then
-            spawn(function()
-                while Config.Fruits.AutoRandomFruit and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("RandomFruit")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Fruits:AddToggle("FruitSniper", {
-    Title = "Fruit Sniper",
-    Default = Config.Fruits.FruitSniper,
-    Callback = function(state)
-        Config.Fruits.FruitSniper = state
-        if state then
-            spawn(function()
-                while Config.Fruits.FruitSniper and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, fruit in pairs(workspace:GetChildren()) do
-                        if fruit:IsA("Tool") and string.find(fruit.Name, "Fruit") and (string.find(fruit.Name, "Dragon") or string.find(fruit.Name, "Leopard")) then
-                            safeTeleport(fruit.Handle.CFrame)
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Procurando frutas valiosas...")
-                    notify("Hyper Neon Hub", "Procurando frutas valiosas...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Fruits:AddToggle("AutoGasFruit", {
-    Title = "Auto Gas Fruit",
-    Default = Config.Fruits.AutoGasFruit,
-    Callback = function(state)
-        Config.Fruits.AutoGasFruit = state
-        if state then
-            spawn(function()
-                while Config.Fruits.AutoGasFruit and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, fruit in pairs(workspace:GetChildren()) do
-                        if fruit:IsA("Tool") and string.find(fruit.Name, "Gas Fruit") then
-                            safeTeleport(fruit.Handle.CFrame)
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Procurando Gas Fruit...")
-                    notify("Hyper Neon Hub", "Procurando Gas Fruit...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Fruits:AddToggle("AutoDragonTokens", {
-    Title = "Auto Dragon Tokens",
-    Default = Config.Fruits.AutoDragonTokens,
-    Callback = function(state)
-        Config.Fruits.AutoDragonTokens = state
-        if state then
-            spawn(function()
-                while Config.Fruits.AutoDragonTokens and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, token in pairs(workspace:GetChildren()) do
-                        if token:IsA("Model") and string.find(token.Name, "Dragon Token") then
-                            safeTeleport(token:GetPrimaryPart().CFrame)
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Coletando Dragon Tokens...")
-                    notify("Hyper Neon Hub", "Coletando Dragon Tokens...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Fruits:AddToggle("AutoFruitMastery", {
-    Title = "Auto Maestria de Fruta",
-    Default = Config.Fruits.AutoFruitMastery,
-    Callback = function(state)
-        Config.Fruits.AutoFruitMastery = state
-        if state then
-            spawn(function()
-                while Config.Fruits.AutoFruitMastery and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy.Humanoid.Health <= enemy.Humanoid.MaxHealth * (Config.Fruits.FruitMasteryThreshold / 100) then
-                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(enemy)
-                            end
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Farmando maestria de fruta...")
-                    notify("Hyper Neon Hub", "Farmando maestria de fruta...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Fruits:AddSlider("FruitMasteryThreshold", {
-    Title = "Limiar de Vida para Maestria de Fruta",
-    Description = "Percentual de vida do inimigo para farm de maestria",
-    Min = 1,
-    Max = 100,
-    Default = Config.Fruits.FruitMasteryThreshold,
-    Callback = function(value)
-        Config.Fruits.FruitMasteryThreshold = value
     end
 })
 
 -- Aba Raids
 Tabs.Raids:AddParagraph({
-    Title = "Opções de Raids e Eventos",
-    Content = "Configure as opções de raids e eventos."
+    Title = "Opções de Raids",
+    Content = "Configure as opções de raids automáticas."
 })
 
 Tabs.Raids:AddToggle("AutoRaid", {
@@ -1383,6 +548,7 @@ Tabs.Raids:AddToggle("AutoRaid", {
         if state then
             spawn(function()
                 while Config.Raids.AutoRaid and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
                     pcall(function()
                         if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
                             ReplicatedStorage.Remotes.CommF_:InvokeServer("StartRaid", Config.Raids.SelectedRaid)
@@ -1396,177 +562,12 @@ Tabs.Raids:AddToggle("AutoRaid", {
 })
 
 Tabs.Raids:AddDropdown("SelectedRaid", {
-    Title = "Tipo de Raid",
-    Values = {"Normal", "Hard", "Nightmare"},
+    Title = "Selecionar Raid",
+    Values = {"Law Raid", "Flame Raid", "Dark Raid", "Ice Raid"},
     Multi = false,
     Default = Config.Raids.SelectedRaid,
     Callback = function(value)
         Config.Raids.SelectedRaid = value
-    end
-})
-
-Tabs.Raids:AddToggle("AutoSeaEvent", {
-    Title = "Auto Sea Event",
-    Default = Config.Raids.AutoSeaEvent,
-    Callback = function(state)
-        Config.Raids.AutoSeaEvent = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoSeaEvent and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("SeaEvent")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Raids:AddToggle("AutoTerrorshark", {
-    Title = "Auto Terrorshark",
-    Default = Config.Raids.AutoTerrorshark,
-    Callback = function(state)
-        Config.Raids.AutoTerrorshark = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoTerrorshark and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and string.find(enemy.Name, "Terrorshark") then
-                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(enemy)
-                            end
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Caçando Terrorshark...")
-                    notify("Hyper Neon Hub", "Caçando Terrorshark...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Raids:AddToggle("AutoMirageIsland", {
-    Title = "Auto Mirage Island",
-    Default = Config.Raids.AutoMirageIsland,
-    Callback = function(state)
-        Config.Raids.AutoMirageIsland = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoMirageIsland and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, island in pairs(workspace:GetChildren()) do
-                        if island:IsA("Model") and string.find(island.Name, "Mirage Island") then
-                            safeTeleport(island:GetPrimaryPart().CFrame)
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Procurando Mirage Island...")
-                    notify("Hyper Neon Hub", "Procurando Mirage Island...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Raids:AddToggle("AutoKitsuneEvent", {
-    Title = "Auto Kitsune Event",
-    Default = Config.Raids.AutoKitsuneEvent,
-    Callback = function(state)
-        Config.Raids.AutoKitsuneEvent = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoKitsuneEvent and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("KitsuneEvent")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Raids:AddToggle("AutoLeviathan", {
-    Title = "Auto Leviathan",
-    Default = Config.Raids.AutoLeviathan,
-    Callback = function(state)
-        Config.Raids.AutoLeviathan = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoLeviathan and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
-                        if enemy:IsA("Model") and string.find(enemy.Name, "Leviathan") then
-                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                            if distance > 50 then
-                                safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 10, 0))
-                            else
-                                followEnemy(enemy)
-                            end
-                            wait(randomDelay)
-                        end
-                    end
-                    logMessage("Caçando Leviathan...")
-                    notify("Hyper Neon Hub", "Caçando Leviathan...", 2)
-                    mimicBehavior()
-                    wait(0.1)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Raids:AddToggle("AutoDragonEvent", {
-    Title = "Auto Dragon Event",
-    Default = Config.Raids.AutoDragonEvent,
-    Callback = function(state)
-        Config.Raids.AutoDragonEvent = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoDragonEvent and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("DragonEvent")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Raids:AddToggle("AutoHydraEvent", {
-    Title = "Auto Hydra Event",
-    Default = Config.Raids.AutoHydraEvent,
-    Callback = function(state)
-        Config.Raids.AutoHydraEvent = state
-        if state then
-            spawn(function()
-                while Config.Raids.AutoHydraEvent and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("HydraEvent")
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
     end
 })
 
@@ -1576,56 +577,18 @@ Tabs.Teleport:AddParagraph({
     Content = "Configure as opções de teleporte."
 })
 
-local islandPositions = {
-    ["Hydra Island"] = CFrame.new(5228, 602, -20),
-    ["Port Town"] = CFrame.new(-290, 30, 5378),
-    ["Turtle Island"] = CFrame.new(-10500, 332, -8500),
-    ["Mansion"] = CFrame.new(-390, 332, 650),
-}
-
-Tabs.Teleport:AddToggle("AutoTeleport", {
-    Title = "Auto Teleport",
-    Default = Config.Teleport.AutoTeleport,
+Tabs.Teleport:AddToggle("NoClip", {
+    Title = "NoClip",
+    Default = Config.Teleport.NoClip,
     Callback = function(state)
-        Config.Teleport.AutoTeleport = state
+        Config.Teleport.NoClip = state
         if state then
             spawn(function()
-                while Config.Teleport.AutoTeleport and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
-                    local targetCFrame = islandPositions[Config.Teleport.SelectedIsland]
-                    if targetCFrame then
-                        safeTeleport(targetCFrame)
-                    end
-                    wait(5)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Teleport:AddDropdown("SelectedIsland", {
-    Title = "Selecione a Ilha",
-    Values = {"Hydra Island", "Port Town", "Turtle Island", "Mansion"},
-    Multi = false,
-    Default = Config.Teleport.SelectedIsland,
-    Callback = function(value)
-        Config.Teleport.SelectedIsland = value
-    end
-})
-
-Tabs.Teleport:AddToggle("AutoSafeZone", {
-    Title = "Auto Zona Segura",
-    Default = Config.Teleport.AutoSafeZone,
-    Callback = function(state)
-        Config.Teleport.AutoSafeZone = state
-        if state then
-            spawn(function()
-                while Config.Teleport.AutoSafeZone and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
-                    if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * 0.3 then
-                        safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, Config.Teleport.SafeZoneHeight, 0))
-                        logMessage("Indo para zona segura...")
-                        notify("Hyper Neon Hub", "Indo para zona segura...", 3)
-                        wait(5)
+                while Config.Teleport.NoClip and LocalPlayer.Character do
+                    for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            part.CanCollide = false
+                        end
                     end
                     wait(0.1)
                 end
@@ -1634,14 +597,37 @@ Tabs.Teleport:AddToggle("AutoSafeZone", {
     end
 })
 
-Tabs.Teleport:AddSlider("SafeZoneHeight", {
-    Title = "Altura da Zona Segura",
-    Description = "Altura para teleporte em zona segura",
-    Min = 50,
-    Max = 500,
-    Default = Config.Teleport.SafeZoneHeight,
+Tabs.Teleport:AddToggle("TeleportToIsland", {
+    Title = "Teleportar para Ilha",
+    Default = Config.Teleport.TeleportToIsland,
+    Callback = function(state)
+        Config.Teleport.TeleportToIsland = state
+        if state then
+            spawn(function()
+                while Config.Teleport.TeleportToIsland and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        local island = workspace:FindFirstChild(Config.Teleport.SelectedIsland)
+                        if island then
+                            local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear)
+                            local tween = TweenService:Create(LocalPlayer.Character.HumanoidRootPart, tweenInfo, {CFrame = island.CFrame + Vector3.new(0, 5, 0)})
+                            tween:Play()
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Teleport:AddDropdown("SelectedIsland", {
+    Title = "Selecionar Ilha",
+    Values = {"Windmill", "Marine Starter", "Jungle", "Pirate Village"},
+    Multi = false,
+    Default = Config.Teleport.SelectedIsland,
     Callback = function(value)
-        Config.Teleport.SafeZoneHeight = value
+        Config.Teleport.SelectedIsland = value
     end
 })
 
@@ -1657,11 +643,9 @@ Tabs.Visuals:AddToggle("RemoveFog", {
     Callback = function(state)
         Config.Visuals.RemoveFog = state
         if state then
-            Lighting.Atmosphere.Density = 0
-            Lighting.Atmosphere.Offset = 0
+            game:GetService("Lighting").FogEnd = 100000
         else
-            Lighting.Atmosphere.Density = 0.3
-            Lighting.Atmosphere.Offset = 0.5
+            game:GetService("Lighting").FogEnd = 500
         end
     end
 })
@@ -1672,74 +656,19 @@ Tabs.Visuals:AddToggle("FullBright", {
     Callback = function(state)
         Config.Visuals.FullBright = state
         if state then
-            Lighting.Brightness = 3
-            Lighting.GlobalShadows = false
+            game:GetService("Lighting").Brightness = 3
+            game:GetService("Lighting").GlobalShadows = false
         else
-            Lighting.Brightness = 1
-            Lighting.GlobalShadows = true
+            game:GetService("Lighting").Brightness = 1
+            game:GetService("Lighting").GlobalShadows = true
         end
-    end
-})
-
-Tabs.Visuals:AddToggle("FPSBoost", {
-    Title = "FPS Boost",
-    Default = Config.Visuals.FPSBoost,
-    Callback = function(state)
-        Config.Visuals.FPSBoost = state
-        if state then
-            Lighting.GlobalShadows = false
-            Lighting.FogEnd = 999999
-            for _, v in pairs(workspace:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CastShadow = false
-                end
-            end
-        else
-            Lighting.GlobalShadows = true
-            Lighting.FogEnd = 100000
-        end
-    end
-})
-
-Tabs.Visuals:AddToggle("CustomFOV", {
-    Title = "FOV Personalizado",
-    Default = Config.Visuals.CustomFOV,
-    Callback = function(state)
-        Config.Visuals.CustomFOV = state
-        if state then
-            workspace.CurrentCamera.FieldOfView = Config.Visuals.FOVValue
-        else
-            workspace.CurrentCamera.FieldOfView = 70
-        end
-    end
-})
-
-Tabs.Visuals:AddSlider("FOVValue", {
-    Title = "Valor do FOV",
-    Description = "Ajuste o campo de visão",
-    Min = 30,
-    Max = 120,
-    Default = Config.Visuals.FOVValue,
-    Callback = function(value)
-        Config.Visuals.FOVValue = value
-        if Config.Visuals.CustomFOV then
-            workspace.CurrentCamera.FieldOfView = value
-        end
-    end
-})
-
-Tabs.Visuals:AddToggle("ShowHitbox", {
-    Title = "Mostrar Hitbox",
-    Default = Config.Visuals.ShowHitbox,
-    Callback = function(state)
-        Config.Visuals.ShowHitbox = state
     end
 })
 
 -- Aba Stats
 Tabs.Stats:AddParagraph({
     Title = "Opções de Stats",
-    Content = "Configure as opções de stats e hacks."
+    Content = "Configure as opções de stats automáticas."
 })
 
 Tabs.Stats:AddToggle("AutoStats", {
@@ -1750,39 +679,12 @@ Tabs.Stats:AddToggle("AutoStats", {
         if state then
             spawn(function()
                 while Config.Stats.AutoStats and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
                     pcall(function()
                         if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", Config.Stats.StatAllocation, 3)
-                        end
-                    end)
-                    wait(randomDelay)
-                end
-            end)
-        end
-    end
-})
-
-Tabs.Stats:AddDropdown("StatAllocation", {
-    Title = "Stat para Alocar",
-    Values = {"Melee", "Defense", "Sword", "Gun", "Fruit"},
-    Multi = false,
-    Default = Config.Stats.StatAllocation,
-    Callback = function(value)
-        Config.Stats.StatAllocation = value
-    end
-})
-
-Tabs.Stats:AddToggle("AutoHaki", {
-    Title = "Auto Haki",
-    Default = Config.Stats.AutoHaki,
-    Callback = function(state)
-        Config.Stats.AutoHaki = state
-        if state then
-            spawn(function()
-                while Config.Stats.AutoHaki and LocalPlayer.Character do
-                    pcall(function()
-                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
-                            ReplicatedStorage.Remotes.CommF_:InvokeServer("Haki", true)
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Melee", 1)
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Defense", 1)
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Sword", 1)
                         end
                     end)
                     wait(randomDelay)
@@ -1800,7 +702,7 @@ Tabs.Stats:AddToggle("SpeedHack", {
         if state then
             spawn(function()
                 while Config.Stats.SpeedHack and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") do
-                    LocalPlayer.Character.Humanoid.WalkSpeed = Config.Stats.WalkSpeed
+                    LocalPlayer.Character.Humanoid.WalkSpeed = Config.Stats.SpeedValue
                     wait(0.1)
                 end
             end)
@@ -1812,14 +714,14 @@ Tabs.Stats:AddToggle("SpeedHack", {
     end
 })
 
-Tabs.Stats:AddSlider("WalkSpeed", {
-    Title = "Velocidade de Movimento",
-    Description = "Ajuste a velocidade de movimento",
+Tabs.Stats:AddSlider("SpeedValue", {
+    Title = "Velocidade",
+    Description = "Ajuste a velocidade do personagem",
     Min = 16,
     Max = 200,
-    Default = Config.Stats.WalkSpeed,
+    Default = Config.Stats.SpeedValue,
     Callback = function(value)
-        Config.Stats.WalkSpeed = value
+        Config.Stats.SpeedValue = value
         if Config.Stats.SpeedHack and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             LocalPlayer.Character.Humanoid.WalkSpeed = value
         end
@@ -1834,7 +736,7 @@ Tabs.Stats:AddToggle("JumpPowerHack", {
         if state then
             spawn(function()
                 while Config.Stats.JumpPowerHack and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") do
-                    LocalPlayer.Character.Humanoid.JumpPower = Config.Stats.JumpPower
+                    LocalPlayer.Character.Humanoid.JumpPower = Config.Stats.JumpPowerValue
                     wait(0.1)
                 end
             end)
@@ -1846,22 +748,15 @@ Tabs.Stats:AddToggle("JumpPowerHack", {
     end
 })
 
-Tabs.Stats:AddSlider("JumpPower", {
-    Title = "Poder de Pulo",
-    Description = "Ajuste o poder de pulo",
+Tabs.Stats:AddSlider("JumpPowerValue", {
+    Title = "Força de Pulo",
+    Description = "Ajuste a força de pulo do personagem",
     Min = 50,
     Max = 200,
-    Default = Config.Stats.JumpPower,
+    Default = Config.Stats.JumpPowerValue,
     Callback = function(value)
-        Config.Stats.JumpPower = value
+        Config.Stats.JumpPowerValue = value
         if Config.Stats.JumpPowerHack and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
-            LocalPlayer.Character.Humanoid.JumpPower = value
-        end
-    end
-})
-
-
-if Config.Stats.JumpPowerHack and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
             LocalPlayer.Character.Humanoid.JumpPower = value
         end
     end
@@ -2385,5 +1280,3 @@ notify("Hyper Neon Hub", "Script carregado com sucesso!", 8)
 
 -- Final do Script
 -- Total de linhas: 2100+ (contando comentários e espaçamentos)
-
-   
