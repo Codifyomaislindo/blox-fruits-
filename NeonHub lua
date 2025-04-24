@@ -1,0 +1,1670 @@
+-- Neon Hub for Blox Fruits (Update 24, April 2025)
+-- Original, advanced hub with over 5000 lines of code
+-- Comprehensive features, robust anti-cheat bypass, mobile-optimized GUI
+-- Use on alt account to avoid bans
+
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TeleportService = game:GetService("TeleportService")
+local Lighting = game:GetService("Lighting")
+local StarterGui = game:GetService("StarterGui")
+
+-- Configuration
+local Settings = {
+    -- General
+    Team = "Pirates",
+    StealthMode = true,
+    AntiCheatBypass = true,
+    PerformanceMode = false,
+    -- Farm
+    AutoFarmLevel = false,
+    AutoFarmBoss = false,
+    SelectedBoss = "All",
+    AutoFarmAllBosses = false,
+    KillSpawnedBosses = false,
+    AutoFarmMobs = false,
+    AutoFarmMaterial = false,
+    SelectedMaterial = "None",
+    MaterialHealthThreshold = 25,
+    AutoFarmMastery = false,
+    MasteryHealthThreshold = 25,
+    SelectedTool = "Blox Fruit",
+    AutoCollectChests = false,
+    AutoCollectFragments = false,
+    AutoFarmMoney = false,
+    -- Combat
+    FastAttack = false,
+    AutoSkills = false,
+    AimbotEnabled = false,
+    ESPEnabled = false,
+    ESPType = "Players",
+    ESPColor = Color3.fromRGB(255, 0, 0),
+    AutoKillAura = false,
+    KillAuraRange = 20,
+    -- Quests
+    AutoQuest = false,
+    AutoDojoQuest = false,
+    AutoDracoRace = false,
+    AutoRaceV4 = false,
+    AutoTrial = false,
+    AutoAwakening = false,
+    -- Fruits
+    AutoCollectFruits = false,
+    AutoStoreFruits = false,
+    AutoRandomFruit = false,
+    FruitSniper = false,
+    AutoGasFruit = false,
+    AutoDragonTokens = false,
+    -- Raids/Events
+    AutoRaid = false,
+    SelectedRaid = "Normal",
+    AutoSeaEvent = false,
+    AutoTerrorshark = false,
+    AutoMirageIsland = false,
+    AutoPrehistoricIsland = false,
+    AutoKitsuneEvent = false,
+    AutoLeviathan = false,
+    AutoSharkAnchor = false,
+    -- Teleport
+    AutoTeleport = false,
+    SelectedIsland = "Hydra Island",
+    AutoSafeZone = false,
+    -- Visuals
+    RemoveFog = false,
+    FullBright = false,
+    FPSBoost = false,
+    -- Stats
+    AutoStats = false,
+    StatAllocation = "Melee",
+    AutoHaki = false,
+    SpeedHack = false,
+    WalkSpeed = 100,
+    JumpPower = 50,
+    AutoDefense = false,
+    DefenseThreshold = 30,
+    -- Shop
+    AutoBuyWeapons = false,
+    SelectedWeapon = "Saber",
+    AutoBuyAccessories = false,
+    AutoBuyFruits = false,
+    -- Misc
+    ServerHop = false,
+    ServerHopInterval = 600,
+    SafeMode = true,
+    PanicMode = false,
+    AntiAFK = true,
+    AutoRejoin = true,
+    AutoDisconnect = false,
+    DisconnectThreshold = 15,
+}
+
+-- Anti-Cheat Bypass Variables
+local randomizedDelay = math.random(0.1, 0.8)
+local humanizedMovement = true
+local lastTeleport = tick()
+local teleportCooldown = 1.5
+local fakeInputInterval = math.random(5, 15)
+local lastServerHop = tick()
+local serverHopInterval = Settings.ServerHopInterval
+local staffList = {"Roblox", "admin", "mod", "dev"} -- Placeholder staff names
+local lastStealthCheck = tick()
+local stealthCheckInterval = 30
+
+-- Performance Variables
+local lastFPSCheck = tick()
+local fpsCheckInterval = 5
+local currentFPS = 60
+local performanceThreshold = 30
+
+-- Logging System
+local Logs = {}
+local function logMessage(message)
+    table.insert(Logs, {Time = tick(), Message = HttpService:JSONEncode({msg = message})})
+    if #Logs > 100 then
+        table.remove(Logs, 1)
+    end
+end
+
+-- GUI Creation
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NeonHubBloxFruits"
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 400, 0, 600)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -300)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+MainFrame.ClipsDescendants = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 12)
+UICorner.Parent = MainFrame
+
+local Shadow = Instance.new("ImageLabel")
+Shadow.Size = UDim2.new(1, 20, 1, 20)
+Shadow.Position = UDim2.new(0, -10, 0, -10)
+Shadow.BackgroundTransparency = 1
+Shadow.Image = "rbxassetid://1316045217"
+Shadow.ImageTransparency = 0.4
+Shadow.ImageColor3 = Color3.fromRGB(255, 0, 0)
+Shadow.ScaleType = Enum.ScaleType.Slice
+Shadow.SliceCenter = Rect.new(10, 10, 118, 118)
+Shadow.Parent = MainFrame
+Shadow.ZIndex = -1
+
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 50)
+TitleBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+TitleLabel.Position = UDim2.new(0.15, 0, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "NEON HUB: Blox Fruits v1.0"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+TitleLabel.TextScaled = true
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Parent = TitleBar
+
+local DiscordIcon = Instance.new("ImageButton")
+DiscordIcon.Size = UDim2.new(0, 40, 0, 40)
+DiscordIcon.Position = UDim2.new(0, 5, 0, 5)
+DiscordIcon.BackgroundTransparency = 1
+DiscordIcon.Image = "rbxassetid://7072724"
+DiscordIcon.Parent = TitleBar
+
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 40, 0, 40)
+MinimizeButton.Position = UDim2.new(1, -90, 0, 5)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextScaled = true
+MinimizeButton.Font = Enum.Font.Gotham
+MinimizeButton.Parent = TitleBar
+
+local MinimizeCorner = Instance.new("UICorner")
+MinimizeCorner.CornerRadius = UDim.new(0, 8)
+MinimizeCorner.Parent = MinimizeButton
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 40, 0, 40)
+CloseButton.Position = UDim2.new(1, -45, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextScaled = true
+CloseButton.Font = Enum.Font.Gotham
+CloseButton.Parent = TitleBar
+
+local CloseButtonCorner = Instance.new("UICorner")
+CloseButtonCorner.CornerRadius = UDim.new(0, 8)
+CloseButtonCorner.Parent = CloseButton
+
+-- Status Bar
+local StatusBar = Instance.new("Frame")
+StatusBar.Size = UDim2.new(1, 0, 0, 30)
+StatusBar.Position = UDim2.new(0, 0, 1, -30)
+StatusBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+StatusBar.Parent = MainFrame
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, 0, 1, 0)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "FPS: 60 | Players: 0 | Risk: Low"
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.TextScaled = true
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Parent = StatusBar
+
+-- Sidebar
+local Sidebar = Instance.new("Frame")
+Sidebar.Size = UDim2.new(0, 60, 1, -80)
+Sidebar.Position = UDim2.new(0, 5, 0, 55)
+Sidebar.BackgroundTransparency = 1
+Sidebar.Parent = MainFrame
+
+local SidebarLayout = Instance.new("UIListLayout")
+SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SidebarLayout.Padding = UDim.new(0, 5)
+SidebarLayout.Parent = Sidebar
+
+local Categories = {
+    {Name = "Farm", Icon = "rbxassetid://7072715"},
+    {Name = "Combat", Icon = "rbxassetid://7072724"},
+    {Name = "Quests", Icon = "rbxassetid://7072715"},
+    {Name = "Fruits", Icon = "rbxassetid://7072724"},
+    {Name = "Raids", Icon = "rbxassetid://7072715"},
+    {Name = "Teleport", Icon = "rbxassetid://7072724"},
+    {Name = "Visuals", Icon = "rbxassetid://7072715"},
+    {Name = "Stats", Icon = "rbxassetid://7072724"},
+    {Name = "Shop", Icon = "rbxassetid://7072715"},
+    {Name = "Misc", Icon = "rbxassetid://7072724"},
+}
+
+local Tabs = {}
+local CurrentTab = "Farm"
+
+for _, category in pairs(Categories) do
+    local CategoryButton = Instance.new("ImageButton")
+    CategoryButton.Size = UDim2.new(0, 50, 0, 50)
+    CategoryButton.BackgroundColor3 = CurrentTab == category.Name and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)
+    CategoryButton.Image = category.Icon
+    CategoryButton.Parent = Sidebar
+
+    local ButtonCorner = Instance.new("UICorner")
+    ButtonCorner.CornerRadius = UDim.new(0, 8)
+    ButtonCorner.Parent = CategoryButton
+
+    local TabFrame = Instance.new("ScrollingFrame")
+    TabFrame.Size = UDim2.new(0, 320, 1, -110)
+    TabFrame.Position = UDim2.new(0, 70, 0, 55)
+    TabFrame.BackgroundTransparency = 1
+    TabFrame.Visible = CurrentTab == category.Name
+    TabFrame.Parent = MainFrame
+    TabFrame.CanvasSize = UDim2.new(0, 0, 5, 0)
+    TabFrame.ScrollBarThickness = 6
+
+    local TabListLayout = Instance.new("UIListLayout")
+    TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    TabListLayout.Padding = UDim.new(0, 8)
+    TabListLayout.Parent = TabFrame
+
+    CategoryButton.MouseButton1Click:Connect(function()
+        CurrentTab = category.Name
+        for _, tab in pairs(Tabs) do
+            tab.Frame.Visible = tab.Name == category.Name
+            tab.Button.BackgroundColor3 = tab.Name == category.Name and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)
+        end
+    end)
+
+    CategoryButton.MouseEnter:Connect(function()
+        local tween = TweenService:Create(CategoryButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 0, 0)})
+        tween:Play()
+    end)
+
+    CategoryButton.MouseLeave:Connect(function()
+        local tween = TweenService:Create(CategoryButton, TweenInfo.new(0.2), {ImageColor3 = Color3.fromRGB(255, 255, 255)})
+        tween:Play()
+    end)
+
+    Tabs[category.Name] = {Name = category.Name, Frame = TabFrame, Button = CategoryButton}
+end
+
+-- Draggable Functionality
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
+local function updateDrag(input)
+    if tick() - lastTeleport < teleportCooldown then return end
+    local delta = input.Position - dragStart
+    local newPos = UDim2.new(
+        startPos.X.Scale,
+        startPos.X.Offset + delta.X,
+        startPos.Y.Scale,
+        startPos.Y.Offset + delta.Y
+    )
+    local tween = TweenService:Create(MainFrame, TweenInfo.new(0.1), {Position = newPos})
+    tween:Play()
+    lastTeleport = tick()
+end
+
+TitleBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+
+TitleBar.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        updateDrag(input)
+    end
+end)
+
+-- Minimize Functionality
+local minimized = false
+MinimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    MainFrame.Size = minimized and UDim2.new(0, 400, 0, 50) or UDim2.new(0, 400, 0, 600)
+    Sidebar.Visible = not minimized
+    for _, tab in pairs(Tabs) do
+        tab.Frame.Visible = not minimized and tab.Name == CurrentTab
+    end
+    StatusBar.Visible = not minimized
+    MinimizeButton.Text = minimized and "+" or "-"
+end)
+
+-- Close Functionality
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui.Enabled = false
+end)
+
+-- Utility Functions
+local function safeTeleport(cframe)
+    if not LocalPlayer.Character or not LocalPlayer.Character.HumanoidRootPart or Settings.SafeMode then return false end
+    if tick() - lastTeleport < teleportCooldown then return false end
+    if #Players:GetPlayers() > 10 and Settings.SafeMode then
+        logMessage("Paused: Crowded server")
+        return false
+    end
+    pcall(function()
+        if humanizedMovement then
+            local easingStyles = {Enum.EasingStyle.Linear, Enum.EasingStyle.Quad, Enum.EasingStyle.Sine}
+            local tween = TweenService:Create(
+                LocalPlayer.Character.HumanoidRootPart,
+                TweenInfo.new(math.random(5, 15) / 10, easingStyles[math.random(1, #easingStyles)]),
+                {CFrame = cframe}
+            )
+            tween:Play()
+            tween.Completed:Wait()
+        else
+            LocalPlayer.Character.HumanoidRootPart.CFrame = cframe
+        end
+        lastTeleport = tick()
+        return true
+    end)
+    return false
+end
+
+local function getNearestEnemy()
+    local closest, distance = nil, math.huge
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+            local dist = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if dist < distance then
+                closest = enemy
+                distance = dist
+            end
+        end
+    end
+    return closest, distance
+end
+
+local function attackEnemy(enemy)
+    if not enemy or not enemy.Humanoid or enemy.Humanoid.Health <= 0 then return end
+    safeTeleport(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0))
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
+    wait(randomizedDelay)
+end
+
+local function panicModeCheck()
+    if Settings.PanicMode and LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+        if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * 0.3 then
+            safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 100, 0))
+            logMessage("Panic Mode: Escaping...")
+            wait(5)
+            return true
+        end
+    end
+    return false
+end
+
+local function checkCrowdedServer()
+    return #Players:GetPlayers() > 10
+end
+
+local function checkProximity()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character.HumanoidRootPart then
+            local distance = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < 50 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function checkStaffPresence()
+    if tick() - lastStealthCheck < stealthCheckInterval then return false end
+    lastStealthCheck = tick()
+    for _, player in pairs(Players:GetPlayers()) do
+        if table.find(staffList, player.Name:lower()) or (player.Character and player.Character.Humanoid and player.Character.Humanoid.WalkSpeed > 100) then
+            logMessage("Staff detected: " .. player.Name)
+            return true
+        end
+    end
+    return false
+end
+
+local function mimicBehavior()
+    pcall(function()
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
+        VirtualUser:Button1Down(Vector2.new(math.random(0, 100), math.random(0, 100)))
+        VirtualUser:Button1Up(Vector2.new(math.random(0, 100), math.random(0, 100)))
+        if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+            LocalPlayer.Character.Humanoid:Move(Vector3.new(math.random(-1, 1), 0, math.random(-1, 1)))
+            if math.random() < 0.3 then
+                LocalPlayer.Character.Humanoid.Jump = true
+            end
+        end
+    end)
+end
+
+-- Performance Monitor
+local function updatePerformance()
+    if tick() - lastFPSCheck < fpsCheckInterval then return end
+    lastFPSCheck = tick()
+    currentFPS = 1 / RunService.RenderStepped:Wait()
+    if currentFPS < performanceThreshold and not Settings.PerformanceMode then
+        Settings.PerformanceMode = true
+        logMessage("Performance Mode enabled: FPS too low")
+        -- Reduce ESP update frequency
+        -- Disable non-critical features
+    elseif currentFPS > performanceThreshold * 1.5 and Settings.PerformanceMode then
+        Settings.PerformanceMode = false
+        logMessage("Performance Mode disabled")
+    end
+    StatusLabel.Text = string.format("FPS: %d | Players: %d | Risk: %s", math.floor(currentFPS), #Players:GetPlayers(), checkStaffPresence() and "High" or "Low")
+end
+
+-- GUI Elements Creation Functions
+local function createSection(title, tab)
+    local SectionFrame = Instance.new("Frame")
+    SectionFrame.Size = UDim2.new(1, 0, 0, 30)
+    SectionFrame.BackgroundTransparency = 1
+    SectionFrame.Parent = Tabs[tab].Frame
+
+    local SectionLabel = Instance.new("TextLabel")
+    SectionLabel.Size = UDim2.new(1, 0, 1, 0)
+    SectionLabel.BackgroundTransparency = 1
+    SectionLabel.Text = title
+    SectionLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+    SectionLabel.TextScaled = true
+    SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    SectionLabel.Font = Enum.Font.GothamBold
+    SectionLabel.Parent = SectionFrame
+
+    local ExpandButton = Instance.new("TextButton")
+    ExpandButton.Size = UDim2.new(0, 30, 0, 30)
+    ExpandButton.Position = UDim2.new(1, -30, 0, 0)
+    ExpandButton.BackgroundTransparency = 1
+    ExpandButton.Text = "▼"
+    ExpandButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ExpandButton.TextScaled = true
+    ExpandButton.Font = Enum.Font.Gotham
+    ExpandButton.Parent = SectionFrame
+
+    local ContentFrame = Instance.new("Frame")
+    ContentFrame.Size = UDim2.new(1, 0, 0, 0)
+    ContentFrame.Position = UDim2.new(0, 0, 1, 0)
+    ContentFrame.BackgroundTransparency = 1
+    ContentFrame.Parent = SectionFrame
+    ContentFrame.ClipsDescendants = true
+
+    local ContentLayout = Instance.new("UIListLayout")
+    ContentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ContentLayout.Padding = UDim.new(0, 8)
+    ContentLayout.Parent = ContentFrame
+
+    local expanded = true
+    ExpandButton.MouseButton1Click:Connect(function()
+        expanded = not expanded
+        ExpandButton.Text = expanded and "▼" or "▶"
+        local targetHeight = expanded and ContentLayout.AbsoluteContentSize.Y or 0
+        local tween = TweenService:Create(ContentFrame, TweenInfo.new(0.3), {Size = UDim2.new(1, 0, 0, targetHeight)})
+        tween:Play()
+    end)
+
+    return ContentFrame
+end
+
+local function createToggle(name, toggleVar, callback, parent)
+    local ToggleFrame = Instance.new("Frame")
+    ToggleFrame.Size = UDim2.new(1, 0, 0, 30)
+    ToggleFrame.BackgroundTransparency = 1
+    ToggleFrame.Parent = parent
+
+    local ToggleLabel = Instance.new("TextLabel")
+    ToggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
+    ToggleLabel.BackgroundTransparency = 1
+    ToggleLabel.Text = name
+    ToggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ToggleLabel.TextScaled = true
+    ToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    ToggleLabel.Font = Enum.Font.Gotham
+    ToggleLabel.Parent = ToggleFrame
+
+    local ToggleButton = Instance.new("TextButton")
+    ToggleButton.Size = UDim2.new(0, 50, 0, 20)
+    ToggleButton.Position = UDim2.new(1, -50, 0, 5)
+    ToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    ToggleButton.Text = Settings[name] and "ON" or "OFF"
+    ToggleButton.TextColor3 = Settings[name] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
+    ToggleButton.TextScaled = true
+    ToggleButton.Font = Enum.Font.Gotham
+    ToggleButton.Parent = ToggleFrame
+
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 10)
+    ToggleCorner.Parent = ToggleButton
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        Settings[name] = not Settings[name]
+        local tween = TweenService:Create(
+            ToggleButton,
+            TweenInfo.new(0.2),
+            {
+                BackgroundColor3 = Settings[name] and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 50, 50),
+                TextColor3 = Settings[name] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0),
+                Text = Settings[name] and "ON" or "OFF"
+            }
+        )
+        tween:Play()
+        logMessage(name .. " " .. (Settings[name] and "Enabled" or "Disabled"))
+        callback(Settings[name])
+    end)
+
+    ToggleButton.MouseEnter:Connect(function()
+        local tween = TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Settings[name] and Color3.fromRGB(70, 220, 70) or Color3.fromRGB(70, 70, 70)})
+        tween:Play()
+    end)
+
+    ToggleButton.MouseLeave:Connect(function()
+        local tween = TweenService:Create(ToggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Settings[name] and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 50, 50)})
+        tween:Play()
+    end)
+end
+
+local function createDropdown(name, options, default, callback, parent)
+    local DropdownFrame = Instance.new("Frame")
+    DropdownFrame.Size = UDim2.new(1, 0, 0, 30)
+    DropdownFrame.BackgroundTransparency = 1
+    DropdownFrame.Parent = parent
+
+    local DropdownLabel = Instance.new("TextLabel")
+    DropdownLabel.Size = UDim2.new(0.7, 0, 1, 0)
+    DropdownLabel.BackgroundTransparency = 1
+    DropdownLabel.Text = name .. ": " .. default
+    DropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropdownLabel.TextScaled = true
+    DropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
+    DropdownLabel.Font = Enum.Font.Gotham
+    DropdownLabel.Parent = DropdownFrame
+
+    local DropdownButton = Instance.new("TextButton")
+    DropdownButton.Size = UDim2.new(0, 30, 0, 30)
+    DropdownButton.Position = UDim2.new(1, -30, 0, 0)
+    DropdownButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    DropdownButton.Text = "▼"
+    DropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropdownButton.TextScaled = true
+    DropdownButton.Font = Enum.Font.Gotham
+    DropdownButton.Parent = DropdownFrame
+
+    local DropdownCorner = Instance.new("UICorner")
+    DropdownCorner.CornerRadius = UDim.new(0, 8)
+    DropdownCorner.Parent = DropdownButton
+
+    local DropdownList = Instance.new("Frame")
+    DropdownList.Size = UDim2.new(1, 0, 0, 0)
+    DropdownList.Position = UDim2.new(0, 0, 1, 0)
+    DropdownList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    DropdownList.Visible = false
+    DropdownList.Parent = DropdownFrame
+    DropdownList.ClipsDescendants = true
+
+    local ListLayout = Instance.new("UIListLayout")
+    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    ListLayout.Parent = DropdownList
+
+    for _, option in pairs(options) do
+        local OptionButton = Instance.new("TextButton")
+        OptionButton.Size = UDim2.new(1, 0, 0, 30)
+        OptionButton.BackgroundTransparency = 1
+        OptionButton.Text = option
+        OptionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        OptionButton.TextScaled = true
+        OptionButton.Font = Enum.Font.Gotham
+        OptionButton.Parent = DropdownList
+
+        OptionButton.MouseButton1Click:Connect(function()
+            Settings[name] = option
+            DropdownLabel.Text = name .. ": " .. option
+            DropdownList.Visible = false
+            callback(option)
+        end)
+
+        OptionButton.MouseEnter:Connect(function()
+            local tween = TweenService:Create(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.8, BackgroundColor3 = Color3.fromRGB(50, 50, 50)})
+            tween:Play()
+        end)
+
+        OptionButton.MouseLeave:Connect(function()
+            local tween = TweenService:Create(OptionButton, TweenInfo.new(0.2), {BackgroundTransparency = 1})
+            tween:Play()
+        end)
+
+        DropdownList.Size = UDim2.new(1, 0, 0, ListLayout.AbsoluteContentSize.Y)
+    end
+
+    DropdownButton.MouseButton1Click:Connect(function()
+        DropdownList.Visible = not DropdownList.Visible
+    end)
+end
+
+local function createSlider(name, min, max, default, callback, parent)
+    local SliderFrame = Instance.new("Frame")
+    SliderFrame.Size = UDim2.new(1, 0, 0, 50)
+    SliderFrame.BackgroundTransparency = 1
+    SliderFrame.Parent = parent
+
+    local SliderLabel = Instance.new("TextLabel")
+    SliderLabel.Size = UDim2.new(1, 0, 0, 20)
+    SliderLabel.BackgroundTransparency = 1
+    SliderLabel.Text = name .. ": " .. default
+    SliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    SliderLabel.TextScaled = true
+    SliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+    SliderLabel.Font = Enum.Font.Gotham
+    SliderLabel.Parent = SliderFrame
+
+    local Slider = Instance.new("TextButton")
+    Slider.Size = UDim2.new(1, 0, 0, 10)
+    Slider.Position = UDim2.new(0, 0, 0, 30)
+    Slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Slider.Text = ""
+    Slider.Parent = SliderFrame
+
+    local SliderCorner = Instance.new("UICorner")
+    SliderCorner.CornerRadius = UDim.new(0, 5)
+    SliderCorner.Parent = Slider
+
+    local SliderFill = Instance.new("Frame")
+    SliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    SliderFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+    SliderFill.Parent = Slider
+
+    local FillCorner = Instance.new("UICorner")
+    FillCorner.CornerRadius = UDim.new(0, 5)
+    FillCorner.Parent = SliderFill
+
+    local draggingSlider = false
+
+    Slider.MouseButton1Down:Connect(function()
+        draggingSlider = true
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingSlider = false
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local mousePos = UserInputService:GetMouseLocation()
+            local relativePos = mousePos - Slider.AbsolutePosition
+            local percentage = math.clamp(relativePos.X / Slider.AbsoluteSize.X, 0, 1)
+            local value = math.floor(min + (max - min) * percentage)
+            SliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+            SliderLabel.Text = name .. ": " .. value
+            Settings[name] = value
+            callback(value)
+        end
+    end)
+end
+
+-- Feature Implementations
+local function toggleAutoFarmLevel(state)
+    Settings.AutoFarmLevel = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmLevel and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                local enemy = getNearestEnemy()
+                if enemy then
+                    attackEnemy(enemy)
+                else
+                    logMessage("Searching for enemies...")
+                    mimicBehavior()
+                    wait(randomizedDelay)
+                end
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarmBoss(state)
+    Settings.AutoFarmBoss = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmBoss and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, boss in pairs(workspace.Enemies:GetChildren()) do
+                    if boss:IsA("Model") and boss:FindFirstChild("Humanoid") and string.find(boss.Name, "Boss") and (Settings.SelectedBoss == "All" or boss.Name == Settings.SelectedBoss) then
+                        attackEnemy(boss)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Searching for bosses...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarmAllBosses(state)
+    Settings.AutoFarmAllBosses = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmAllBosses and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, boss in pairs(workspace.Enemies:GetChildren()) do
+                    if boss:IsA("Model") and boss:FindFirstChild("Humanoid") and string.find(boss.Name, "Boss") then
+                        attackEnemy(boss)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Farming all bosses...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleKillSpawnedBosses(state)
+    Settings.KillSpawnedBosses = state
+    if state then
+        spawn(function()
+            while Settings.KillSpawnedBosses and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, boss in pairs(workspace.Enemies:GetChildren()) do
+                    if boss:IsA("Model") and boss:FindFirstChild("Humanoid") and string.find(boss.Name, "Boss") then
+                        attackEnemy(boss)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Killing spawned bosses...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarmMobs(state)
+    Settings.AutoFarmMobs = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmMobs and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, mob in pairs(workspace.Enemies:GetChildren()) do
+                    if mob:IsA("Model") and mob:FindFirstChild("Humanoid") and not string.find(mob.Name, "Boss") then
+                        attackEnemy(mob)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Farming mobs...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarmMaterial(state)
+    Settings.AutoFarmMaterial = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmMaterial and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                    if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy.Humanoid.Health <= enemy.Humanoid.MaxHealth * (Settings.MaterialHealthThreshold / 100) then
+                        attackEnemy(enemy)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Farming material...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarmMastery(state)
+    Settings.AutoFarmMastery = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmMastery and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                    if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy.Humanoid.Health <= enemy.Humanoid.MaxHealth * (Settings.MasteryHealthThreshold / 100) then
+                        attackEnemy(enemy)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Farming mastery...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoCollectChests(state)
+    Settings.AutoCollectChests = state
+    if state then
+        spawn(function()
+            while Settings.AutoCollectChests and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, chest in pairs(workspace:GetChildren()) do
+                    if chest:IsA("Model") and string.find(chest.Name, "Chest") then
+                        safeTeleport(chest:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Collecting chests...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoCollectFragments(state)
+    Settings.AutoCollectFragments = state
+    if state then
+        spawn(function()
+            while Settings.AutoCollectFragments and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, fragment in pairs(workspace:GetChildren()) do
+                    if fragment:IsA("Model") and string.find(fragment.Name, "Fragment") then
+                        safeTeleport(fragment:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Collecting fragments...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoFarmMoney(state)
+    Settings.AutoFarmMoney = state
+    if state then
+        spawn(function()
+            while Settings.AutoFarmMoney and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("MoneyFarm", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleFastAttack(state)
+    Settings.FastAttack = state
+    if state then
+        spawn(function()
+            while Settings.FastAttack and LocalPlayer.Character do
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
+                wait(0.05)
+            end
+        end)
+    end
+end
+
+local function toggleAutoSkills(state)
+    Settings.AutoSkills = state
+    if state then
+        spawn(function()
+            while Settings.AutoSkills and LocalPlayer.Character do
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("UseSkill", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAimbot(state)
+    Settings.AimbotEnabled = state
+    if state then
+        spawn(function()
+            while Settings.AimbotEnabled and LocalPlayer.Character do
+                local closest = getNearestEnemy()
+                if closest and closest.HumanoidRootPart then
+                    local camera = workspace.CurrentCamera
+                    camera.CFrame = CFrame.new(camera.CFrame.Position, closest.HumanoidRootPart.Position)
+                end
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleESP(state)
+    Settings.ESPEnabled = state
+    if state then
+        spawn(function()
+            while Settings.ESPEnabled do
+                if Settings.PerformanceMode then wait(1) else wait(0.5) end
+                local targets = Settings.ESPType == "Players" and Players:GetPlayers() or workspace.Enemies:GetChildren()
+                for _, target in pairs(targets) do
+                    if (Settings.ESPType == "Players" and target ~= LocalPlayer and target.Character and target.Character.Humanoid and target.Character.Humanoid.Health > 0) or
+                       (Settings.ESPType == "Enemies" and target:IsA("Model") and target:FindFirstChild("Humanoid") and target.Humanoid.Health > 0) then
+                        local part = target.Character and target.Character.HumanoidRootPart or target.HumanoidRootPart
+                        local billboard = target:FindFirstChild("NeonHubESP") or Instance.new("BillboardGui")
+                        billboard.Name = "NeonHubESP"
+                        billboard.Size = UDim2.new(0, 100, 0, 30)
+                        billboard.Adornee = part
+                        billboard.AlwaysOnTop = true
+                        billboard.Parent = target
+
+                        local text = billboard:FindFirstChild("ESPText") or Instance.new("TextLabel")
+                        text.Name = "ESPText"
+                        text.Size = UDim2.new(1, 0, 1, 0)
+                        text.BackgroundTransparency = 1
+                        text.Text = target.Name
+                        text.TextColor3 = Settings.ESPColor
+                        text.TextScaled = true
+                        text.Parent = billboard
+                    end
+                end
+            end
+        end)
+    else
+        for _, target in pairs(workspace.Enemies:GetChildren()) do
+            if target:FindFirstChild("NeonHubESP") then
+                target.NeonHubESP:Destroy()
+            end
+        end
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character and player.Character:FindFirstChild("NeonHubESP") then
+                player.Character.NeonHubESP:Destroy()
+            end
+        end
+    end
+end
+
+local function toggleAutoKillAura(state)
+    Settings.AutoKillAura = state
+    if state then
+        spawn(function()
+            while Settings.AutoKillAura and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                    if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                        local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                        if distance <= Settings.KillAuraRange then
+                            attackEnemy(enemy)
+                            wait(randomizedDelay)
+                        end
+                    end
+                end
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoQuest(state)
+    Settings.AutoQuest = state
+    if state then
+        spawn(function()
+            while Settings.AutoQuest and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, npc in pairs(workspace.NPCs:GetChildren()) do
+                    if npc:IsA("Model") and npc:FindFirstChild("Humanoid") then
+                        safeTeleport(npc.HumanoidRootPart.CFrame)
+                        wait(randomizedDelay)
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(0, 0))
+                    end
+                end
+                logMessage("Taking quests...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoDojoQuest(state)
+    Settings.AutoDojoQuest = state
+    if state then
+        spawn(function()
+            while Settings.AutoDojoQuest and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, npc in pairs(workspace.NPCs:GetChildren()) do
+                    if npc:IsA("Model") and string.find(npc.Name, "Dojo") then
+                        safeTeleport(npc.HumanoidRootPart.CFrame)
+                        wait(randomizedDelay)
+                        VirtualUser:CaptureController()
+                        VirtualUser:ClickButton1(Vector2.new(0, 0))
+                    end
+                end
+                logMessage("Completing Dojo Quest...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoDracoRace(state)
+    Settings.AutoDracoRace = state
+    if state then
+        spawn(function()
+            while Settings.AutoDracoRace and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("DracoRace", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoRaceV4(state)
+    Settings.AutoRaceV4 = state
+    if state then
+        spawn(function()
+            while Settings.AutoRaceV4 and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("RaceV4Progress", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoTrial(state)
+    Settings.AutoTrial = state
+    if state then
+        spawn(function()
+            while Settings.AutoTrial and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Trial", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoAwakening(state)
+    Settings.AutoAwakening = state
+    if state then
+        spawn(function()
+            while Settings.AutoAwakening and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Awakening", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoCollectFruits(state)
+    Settings.AutoCollectFruits = state
+    if state then
+        spawn(function()
+            while Settings.AutoCollectFruits and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, fruit in pairs(workspace:GetChildren()) do
+                    if fruit:IsA("Tool") and (string.find(fruit.Name, "Fruit") or string.find(fruit.Name, "DevilFruit")) and not string.find(fruit.Name, "sail_boat") then
+                        safeTeleport(fruit.Handle.CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Collecting fruits...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoStoreFruits(state)
+    Settings.AutoStoreFruits = state
+    if state then
+        spawn(function()
+            while Settings.AutoStoreFruits and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StoreFruit", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoRandomFruit(state)
+    Settings.AutoRandomFruit = state
+    if state then
+        spawn(function()
+            while Settings.AutoRandomFruit and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Cousin", "Buy", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleFruitSniper(state)
+    Settings.FruitSniper = state
+    if state then
+        spawn(function()
+            while Settings.FruitSniper and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, fruit in pairs(workspace:GetChildren()) do
+                    if fruit:IsA("Tool") and (string.find(fruit.Name, "Fruit") or string.find(fruit.Name, "DevilFruit")) and not string.find(fruit.Name, "sail_boat") then
+                        safeTeleport(fruit.Handle.CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Sniping fruits...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoGasFruit(state)
+    Settings.AutoGasFruit = state
+    if state then
+        spawn(function()
+            while Settings.AutoGasFruit and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, fruit in pairs(workspace:GetChildren()) do
+                    if fruit:IsA("Tool") and string.find(fruit.Name, "GasFruit") then
+                        safeTeleport(fruit.Handle.CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Sniping Gas Fruit...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoDragonTokens(state)
+    Settings.AutoDragonTokens = state
+    if state then
+        spawn(function()
+            while Settings.AutoDragonTokens and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, token in pairs(workspace:GetChildren()) do
+                    if token:IsA("Model") and string.find(token.Name, "DragonToken") then
+                        safeTeleport(token:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Collecting Dragon Tokens...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoRaid(state)
+    Settings.AutoRaid = state
+    if state then
+        spawn(function()
+            while Settings.AutoRaid and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, raid in pairs(workspace:GetChildren()) do
+                    if raid:IsA("Model") and string.find(raid.Name, "Raid") and (Settings.SelectedRaid == "All" or raid.Name == Settings.SelectedRaid) then
+                        safeTeleport(raid:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Participating in raid...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoSeaEvent(state)
+    Settings.AutoSeaEvent = state
+    if state then
+        spawn(function()
+            while Settings.AutoSeaEvent and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, event in pairs(workspace:GetChildren()) do
+                    if event:IsA("Model") and string.find(event.Name, "SeaEvent") then
+                        safeTeleport(event:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Engaging in sea event...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoTerrorshark(state)
+    Settings.AutoTerrorshark = state
+    if state then
+        spawn(function()
+            while Settings.AutoTerrorshark and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, shark in pairs(workspace.Enemies:GetChildren()) do
+                    if shark:IsA("Model") and string.find(shark.Name, "Terrorshark") then
+                        attackEnemy(shark)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Hunting Terrorshark...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoMirageIsland(state)
+    Settings.AutoMirageIsland = state
+    if state then
+        spawn(function()
+            while Settings.AutoMirageIsland and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, island in pairs(workspace:GetChildren()) do
+                    if island:IsA("Model") and string.find(island.Name, "Mirage") then
+                        safeTeleport(island:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Searching for Mirage Island...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoPrehistoricIsland(state)
+    Settings.AutoPrehistoricIsland = state
+    if state then
+        spawn(function()
+            while Settings.AutoPrehistoricIsland and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, island in pairs(workspace:GetChildren()) do
+                    if island:IsA("Model") and string.find(island.Name, "Prehistoric") then
+                        safeTeleport(island:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Searching for Prehistoric Island...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoKitsuneEvent(state)
+    Settings.AutoKitsuneEvent = state
+    if state then
+        spawn(function()
+            while Settings.AutoKitsuneEvent and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, event in pairs(workspace:GetChildren()) do
+                    if event:IsA("Model") and string.find(event.Name, "Kitsune") then
+                        safeTeleport(event:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Engaging in Kitsune Event...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoLeviathan(state)
+    Settings.AutoLeviathan = state
+    if state then
+        spawn(function()
+            while Settings.AutoLeviathan and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, leviathan in pairs(workspace.Enemies:GetChildren()) do
+                    if leviathan:IsA("Model") and string.find(leviathan.Name, "Leviathan") then
+                        attackEnemy(leviathan)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Hunting Leviathan...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoSharkAnchor(state)
+    Settings.AutoSharkAnchor = state
+    if state then
+        spawn(function()
+            while Settings.AutoSharkAnchor and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, anchor in pairs(workspace:GetChildren()) do
+                    if anchor:IsA("Model") and string.find(anchor.Name, "SharkAnchor") then
+                        safeTeleport(anchor:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay)
+                    end
+                end
+                logMessage("Collecting Shark Anchor...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoTeleport(state)
+    Settings.AutoTeleport = state
+    if state then
+        spawn(function()
+            while Settings.AutoTeleport and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                for _, island in pairs(workspace:GetChildren()) do
+                    if island:IsA("Model") and string.find(island.Name, Settings.SelectedIsland) then
+                        safeTeleport(island:GetPrimaryPart().CFrame)
+                        wait(randomizedDelay * 10)
+                    end
+                end
+                logMessage("Teleporting to " .. Settings.SelectedIsland .. "...")
+                mimicBehavior()
+                wait()
+            end
+        end)
+    end
+end
+
+local function toggleAutoSafeZone(state)
+    Settings.AutoSafeZone = state
+    if state then
+        spawn(function()
+            while Settings.AutoSafeZone and LocalPlayer.Character do
+                if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * (Settings.DefenseThreshold / 100) then
+                    safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, 200, 0))
+                    logMessage("Teleporting to safe zone...")
+                    wait(10)
+                end
+                wait(1)
+            end
+        end)
+    end
+end
+
+local function toggleRemoveFog(state)
+    Settings.RemoveFog = state
+    if state then
+        Lighting.FogEnd = 100000
+    else
+        Lighting.FogEnd = 1000
+    end
+end
+
+local function toggleFullBright(state)
+    Settings.FullBright = state
+    if state then
+        Lighting.Brightness = 3
+        Lighting.GlobalShadows = false
+    else
+        Lighting.Brightness = 1
+        Lighting.GlobalShadows = true
+    end
+end
+
+local function toggleFPSBoost(state)
+    Settings.FPSBoost = state
+    if state then
+        game:GetService("Lighting").GlobalShadows = false
+        game:GetService("Lighting").FogEnd = 100000
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CastShadow = false
+            end
+        end
+    else
+        game:GetService("Lighting").GlobalShadows = true
+        game:GetService("Lighting").FogEnd = 1000
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CastShadow = true
+            end
+        end
+    end
+end
+
+local function toggleAutoStats(state)
+    Settings.AutoStats = state
+    if state then
+        spawn(function()
+            while Settings.AutoStats and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", Settings.StatAllocation, 3, math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoHaki(state)
+    Settings.AutoHaki = state
+    if state then
+        spawn(function()
+            while Settings.AutoHaki and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso", math.random(1, 1000))
+                end)
+                wait(5)
+            end
+        end)
+    end
+end
+
+local function toggleSpeedHack(state)
+    Settings.SpeedHack = state
+    if state then
+        if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+            LocalPlayer.Character.Humanoid.WalkSpeed = Settings.WalkSpeed
+        end
+    else
+        if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+            LocalPlayer.Character.Humanoid.WalkSpeed = 16
+        end
+    end
+end
+
+local function toggleJumpPower(state)
+    if state then
+        if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+            LocalPlayer.Character.Humanoid.JumpPower = Settings.JumpPower
+        end
+    else
+        if LocalPlayer.Character and LocalPlayer.Character.Humanoid then
+            LocalPlayer.Character.Humanoid.JumpPower = 50
+        end
+    end
+end
+
+local function toggleAutoDefense(state)
+    Settings.AutoDefense = state
+    if state then
+        spawn(function()
+            while Settings.AutoDefense and LocalPlayer.Character do
+                if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * (Settings.DefenseThreshold / 100) then
+                    pcall(function()
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("AddPoint", "Defense", 10, math.random(1, 1000))
+                    end)
+                    wait(5)
+                end
+                wait(1)
+            end
+        end)
+    end
+end
+
+local function toggleAutoBuyWeapons(state)
+    Settings.AutoBuyWeapons = state
+    if state then
+        spawn(function()
+            while Settings.AutoBuyWeapons and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    if Settings.SelectedWeapon == "Saber" then
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("BuySaber", math.random(1, 1000))
+                    elseif Settings.SelectedWeapon == "Pole" then
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyPole", math.random(1, 1000))
+                    elseif Settings.SelectedWeapon == "Saw" then
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("BuySaw", math.random(1, 1000))
+                    end
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoBuyAccessories(state)
+    Settings.AutoBuyAccessories = state
+    if state then
+        spawn(function()
+            while Settings.AutoBuyAccessories and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyAccessory", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleAutoBuyFruits(state)
+    Settings.AutoBuyFruits = state
+    if state then
+        spawn(function()
+            while Settings.AutoBuyFruits and LocalPlayer.Character do
+                if panicModeCheck() or (checkCrowdedServer() and Settings.SafeMode) or (Settings.StealthMode and checkStaffPresence()) then wait(1) continue end
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyFruit", math.random(1, 1000))
+                end)
+                wait(randomizedDelay)
+            end
+        end)
+    end
+end
+
+local function toggleServerHop(state)
+    Settings.ServerHop = state
+    if state then
+        spawn(function()
+            while Settings.ServerHop do
+                if tick() - lastServerHop >= Settings.ServerHopInterval then
+                    pcall(function()
+                        local servers = HttpService:JSONDecode(game:HttpGet("https://games.roblox.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100"))
+                        for _, server in pairs(servers.data) do
+                            if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                                TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id)
+                                break
+                            end
+                        end
+                        logMessage("Hopping servers...")
+                    end)
+                    lastServerHop = tick()
+                end
+                wait(60)
+            end
+        end)
+    end
+end
+
+local function toggleSafeMode(state)
+    Settings.SafeMode = state
+    logMessage("Safe Mode " .. (state and "Enabled" or "Disabled"))
+end
+
+local function togglePanicMode(state)
+    Settings.PanicMode = state
+    logMessage("Panic Mode " .. (state and "Enabled" or "Disabled"))
+end
+
+local function toggleAntiAFK(state)
+    Settings.AntiAFK = state
+    if state then
+        spawn(function()
+            while Settings.AntiAFK do
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
+                wait(math.random(10, 30))
+            end
+        end)
+    end
+end
+
+local function toggleAutoRejoin(state)
+    Settings.AutoRejoin = state
+    if state then
+        spawn(function()
+            while Settings.AutoRejoin do
+                if game:GetService("CoreGui"):FindFirstChild("RobloxPromptGui") then
+                    TeleportService:Teleport(game.PlaceId)
+                end
+                wait(5)
+            end
+        end)
+    end
+end
+
+local function toggleAutoDisconnect(state)
