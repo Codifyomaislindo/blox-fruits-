@@ -1,0 +1,1751 @@
+-- Serviços
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local VirtualUser = game:GetService("VirtualUser")
+local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local UserInputService = game:GetService("UserInputService")
+local MarketplaceService = game:GetService("MarketplaceService")
+
+-- Variáveis Locais
+local LocalPlayer = Players.LocalPlayer
+local lastServerHop = tick()
+local randomDelay = math.random(0.1, 0.5)
+local fakeInputInterval = math.random(0.5, 1)
+local serverHopInterval = 300
+local currentSea = 1 -- Sea padrão (será detectado automaticamente)
+local mirageSpawnTimer = 0
+local kitsuneSpawnTimer = 0
+local raidSpawnTimer = 0
+local nearbyMobs = {} -- Lista de mobs próximos
+local nearbyBosses = {} -- Lista de bosses próximos
+
+-- Configurações Padrão
+local Config = {
+    General = {
+        StealthMode = false,
+        AntiCheatBypass = true,
+        PerformanceMode = false,
+        AutoSaveSettings = true,
+        NotificationEnabled = true,
+        Team = "Pirates",
+        WebhookURL = "",
+        CustomTheme = "Dark",
+        AutoSaveInterval = 300,
+        FakeStatsEnabled = false,
+        FakeLevel = 1,
+        FakeBeli = 1000,
+        FakeFragments = 1000,
+        HideNickname = false
+    },
+    Farm = {
+        AutoFarmLevel = false,
+        AutoFarmBoss = false,
+        AutoFarmMobs = false,
+        SelectedBoss = "",
+        SelectedMob = "",
+        SafeDistance = 10,
+        MaxDistance = 1000,
+        AutoFarmMaterials = false,
+        SelectedMaterial = "Wood",
+        AutoFarmSeaBeasts = false,
+        AutoFarmMasteryMelee = false,
+        AutoFarmMasterySword = false,
+        AutoFarmMasteryGun = false,
+        AutoFarmMasteryFruit = false,
+        FarmAboveEnemy = true -- Ficar acima do inimigo
+    },
+    Combat = {
+        ESPEnabled = false,
+        ESPColor = Color3.fromRGB(255, 0, 0),
+        ESPDistance = 1000,
+        AimBotEnabled = false,
+        AimBotFOV = 100,
+        KillAura = false,
+        AutoSkill = false,
+        AutoClick = false,
+        AutoGodMode = false,
+        InfiniteStamina = false,
+        AutoDodge = false,
+        DodgeDistance = 20,
+        AutoBlock = false,
+        AutoParry = false
+    },
+    Quests = {
+        AutoQuest = false,
+        SelectedNPC = "Quest Giver",
+        AutoEliteHunter = false,
+        AutoLegendarySwordQuest = false,
+        AutoRaceV4 = false,
+        AutoDarkbeard = false,
+        AutoRipIndra = false,
+        AutoTushitaQuest = false,
+        AutoYamaQuest = false
+    },
+    Fruits = {
+        AutoCollectFruits = false,
+        AutoStoreFruits = false,
+        AutoEatFruit = false,
+        AutoSnipeFruit = false,
+        SnipeFruitName = "Dragon",
+        AutoFarmFruitMastery = false,
+        AutoFindLegendaryFruit = false,
+        AutoAwakenFruit = false,
+        AutoTradeLegendaryFruit = false,
+        AutoStoreAllFruits = false,
+        AutoDropFruit = false
+    },
+    Raids = {
+        AutoRaid = false,
+        SelectedRaid = "Law Raid",
+        AutoAwaken = false,
+        AutoBuyChip = false,
+        AutoFarmRaidTokens = false,
+        AutoCompleteRaidChallenges = false,
+        AutoFarmAwakeningMaterials = false,
+        AutoFarmRaidEnemies = false,
+        AutoSkipRaidWave = false,
+        AutoFarmRaidBoss = false
+    },
+    Teleport = {
+        NoClip = false,
+        TeleportToIsland = false,
+        SelectedIsland = "Windmill",
+        TeleportToPlayer = false,
+        SelectedPlayer = "",
+        SafeTeleport = false,
+        TeleportToChest = false,
+        TeleportToFruit = false,
+        TeleportToBoss = false,
+        TeleportToNPC = false,
+        TeleportToMaterial = false,
+        TeleportToSafeZone = false,
+        TeleportToEvent = false,
+        TeleportToSeaBeast = false
+    },
+    Visuals = {
+        RemoveFog = false,
+        FullBright = false,
+        FPSBoost = false,
+        RemoveTextures = false,
+        ShowHitbox = false,
+        ESPPlayers = false,
+        ESPChests = false,
+        ESPFruits = false,
+        ESPBosses = false,
+        ESPMobs = false,
+        ESPNPCs = false,
+        ESPMaterials = false,
+        ESPColorPlayers = Color3.fromRGB(0, 255, 0),
+        ESPColorChests = Color3.fromRGB(255, 215, 0),
+        ESPColorFruits = Color3.fromRGB(255, 0, 0),
+        ESPColorBosses = Color3.fromRGB(255, 0, 255),
+        ESPColorMobs = Color3.fromRGB(0, 255, 255),
+        ESPColorNPCs = Color3.fromRGB(255, 255, 0),
+        ESPColorMaterials = Color3.fromRGB(0, 255, 255),
+        ESPDistanceVisuals = 1000
+    },
+    Stats = {
+        AutoStats = false,
+        SpeedHack = false,
+        JumpPowerHack = false,
+        AutoHaki = false,
+        AutoDefense = false,
+        DefenseThreshold = 30,
+        SpeedValue = 50,
+        JumpPowerValue = 50,
+        AutoMastery = false,
+        MasteryType = "Melee",
+        AutoUpgradeBusoshoku = false,
+        AutoUpgradeKen = false,
+        AutoUpgradeGeppo = false,
+        AutoUpgradeSoru = false,
+        AutoUpgradeTekkai = false,
+        AutoUpgradeShigan = false
+    },
+    Shop = {
+        AutoBuyWeapons = false,
+        AutoBuyAccessories = false,
+        AutoBuyFruits = false,
+        AutoBuyHakiColors = false,
+        SelectedWeapon = "Saber",
+        AutoBuyRandom = false,
+        AutoRollBones = false,
+        AutoBuyGamepasses = false,
+        SelectedGamepass = "2x Mastery",
+        AutoBuyFragments = false,
+        AutoBuyBeli = false,
+        AutoBuyLegendarySword = false,
+        AutoBuyFightingStyle = false,
+        SelectedFightingStyle = "Dragon Talon",
+        AutoBuyRareItems = false,
+        AutoBuyBoats = false
+    },
+    Misc = {
+        ServerHop = false,
+        ServerHopInterval = 300,
+        SafeMode = false,
+        PanicMode = false,
+        AntiAFK = false,
+        AutoRejoin = false,
+        AutoDisconnect = false,
+        DisconnectThreshold = 20,
+        AutoRedeemCodes = false,
+        WebhookEnabled = false,
+        AutoJoinCrew = false,
+        CrewID = "",
+        AutoDonate = false,
+        DonateAmount = 1000,
+        AutoKickSuspiciousPlayers = false,
+        AutoReportPlayers = false,
+        AutoFakeDisconnect = false,
+        AutoSpoofStats = false,
+        AutoHideIdentity = false
+    },
+    Automation = {
+        AutoEquipBestWeapon = false,
+        AutoEquipBestFruit = false,
+        AutoTradeFruits = false,
+        AutoDropItems = false,
+        AutoFarmChests = false,
+        AutoFarmMirage = false,
+        AutoFarmMirageGear = false,
+        AutoFarmKitsuneItems = false,
+        AutoFarmLeviathanHeart = false,
+        AutoFarmSeaEvents = false,
+        AutoFarmEliteBosses = false,
+        AutoFarmRareMaterials = false,
+        AutoFarmAllQuests = false,
+        AutoFarmAllBosses = false,
+        AutoFarmAllMobs = false,
+        AutoFarmAllSeaBeasts = false
+    },
+    Events = {
+        PredictMirageSpawn = false,
+        PredictKitsuneSpawn = false,
+        PredictRaidSpawn = false,
+        AutoMirageIsland = false,
+        AutoKitsune = false,
+        AutoLeviathan = false,
+        AutoSeaBeast = false,
+        AutoPirateRaid = false,
+        AutoSharkAttack = false,
+        AutoDarkbeardEvent = false,
+        AutoRipIndraEvent = false,
+        AutoMirageGearCollect = false,
+        AutoKitsuneShrine = false,
+        MirageSpawnInterval = 3600,
+        KitsuneSpawnInterval = 7200,
+        RaidSpawnInterval = 1800
+    },
+    Keybinds = {
+        ToggleUI = Enum.KeyCode.LeftControl,
+        PanicKey = Enum.KeyCode.P,
+        TeleportKey = Enum.KeyCode.T,
+        AutoFarmKey = Enum.KeyCode.F,
+        KillAuraKey = Enum.KeyCode.K,
+        ESPToggleKey = Enum.KeyCode.E,
+        NoClipKey = Enum.KeyCode.N
+    }
+}
+
+-- Dados de Seas (Mobs, Bosses, NPCs, Materiais e Ilhas por Sea)
+local SeaData = {
+    [1] = {
+        Mobs = {"Bandit", "Monkey", "Gorilla", "Pirate", "Royal Soldier"},
+        Bosses = {"Saber Expert", "The Saw", "Greybeard", "Vice Admiral"},
+        NPCs = {"Quest Giver", "Blox Fruit Dealer", "Sick Man", "Weapon Dealer"},
+        Islands = {"Windmill", "Marine Starter", "Jungle", "Pirate Village"},
+        Materials = {"Wood", "Fish Tail", "Leather", "Scrap Metal"}
+    },
+    [2] = {
+        Mobs = {"Fishman Warrior", "Fishman Commando", "Shark Hunter", "Tide Keeper Guard"},
+        Bosses = {"Ice Admiral", "Tide Keeper", "Don Swan", "Diamond"},
+        NPCs = {"Elite Hunter", "Bounty Hunter", "Fruit Seller", "Haki Master"},
+        Islands = {"Fountain City", "Cafe", "Colosseum", "Green Zone"},
+        Materials = {"Magma Ore", "Angel Wings", "Yeti Fur", "Fish Tail"}
+    },
+    [3] = {
+        Mobs = {"Sea Soldier", "Leviathan Guard", "Ghost Shark", "Terror Shark"},
+        Bosses = {"Hydra Boss", "Terrorshark", "Leviathan", "Dragon Boss"},
+        NPCs = {"Mysterious Man", "Ancient Quest Giver", "Mirage Hunter", "Sea Master"},
+        Islands = {"Haunted Castle", "Sea of Treats", "Tiki Outpost", "Floating Turtle"},
+        Materials = {"Vampire Fang", "Dragon Scale", "Mystic Droplet", "Ectoplasm"}
+    }
+}
+
+-- Lista de Frutas Valiosas para Sniping
+local ValuableFruits = {"Dragon", "Leopard", "Venom", "Dough", "Buddha", "Kitsune"}
+
+-- Lista de Gamepasses Disponíveis
+local Gamepasses = {"2x Mastery", "2x Money", "Fast Boats", "Extra Fruits", "VIP"}
+
+-- Lista de Estilos de Luta
+local FightingStyles = {"Dragon Talon", "Superhuman", "Death Step", "Sharkman Karate", "Electric Claw"}
+
+-- Funções Auxiliares
+local function notify(title, content, duration)
+    if Config.General.NotificationEnabled then
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = title,
+            Text = content,
+            Duration = duration or 5
+        })
+    end
+end
+
+local function sendWebhook(message)
+    if Config.Misc.WebhookEnabled and Config.General.WebhookURL ~= "" then
+        pcall(function()
+            local data = {
+                ["content"] = message
+            }
+            local encoded = HttpService:JSONEncode(data)
+            HttpService:PostAsync(Config.General.WebhookURL, encoded, Enum.HttpContentType.ApplicationJson)
+        end)
+    end
+end
+
+local function checkCrowdedServer()
+    return #Players:GetPlayers() > 15
+end
+
+local function checkStaffPresence()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player:GetRankInGroup(game.CreatorId) > 1 then
+            return true
+        end
+    end
+    return false
+end
+
+local function checkProximity()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and LocalPlayer.Character then
+            local distance = (player.Character.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if distance < 50 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function panicModeCheck()
+    return Config.Misc.PanicMode
+end
+
+local function updatePerformance()
+    if Config.General.PerformanceMode then
+        settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        for _, v in pairs(workspace:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CastShadow = false
+                v.Material = Enum.Material.Plastic
+            elseif v:IsA("ParticleEmitter") or v:IsA("Trail") then
+                v.Enabled = false
+            end
+        end
+    end
+end
+
+local function mimicBehavior()
+    if Config.General.StealthMode then
+        VirtualUser:CaptureController()
+        VirtualUser:ClickButton1(Vector2.new(math.random(0, 100), math.random(0, 100)))
+    end
+end
+
+-- Função para Detectar o Sea do Jogador (Melhorada)
+local function detectPlayerSea()
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        return 1 -- Sea padrão
+    end
+
+    local playerPos = LocalPlayer.Character.HumanoidRootPart.Position
+    local seaRegions = {
+        [1] = { Min = Vector3.new(-5000, 0, -5000), Max = Vector3.new(5000, 1000, 5000) }, -- Sea 1
+        [2] = { Min = Vector3.new(5000, 0, -15000), Max = Vector3.new(15000, 1000, -5000) }, -- Sea 2
+        [3] = { Min = Vector3.new(15000, 0, -25000), Max = Vector3.new(25000, 1000, -15000) } -- Sea 3
+    }
+
+    for sea, region in pairs(seaRegions) do
+        if playerPos.X >= region.Min.X and playerPos.X <= region.Max.X and
+           playerPos.Z >= region.Min.Z and playerPos.Z <= region.Max.Z then
+            return sea
+        end
+    end
+
+    -- Verificação adicional por NPCs próximos
+    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+        for sea, data in pairs(SeaData) do
+            if table.find(data.NPCs, npc.Name) then
+                return sea
+            end
+        end
+    end
+
+    -- Fallback: Tenta detectar pelo nível do jogador
+    local playerLevel = LocalPlayer.Data and LocalPlayer.Data.Level and LocalPlayer.Data.Level.Value or 1
+    if playerLevel >= 1500 then
+        return 3
+    elseif playerLevel >= 700 then
+        return 2
+    else
+        return 1
+    end
+end
+
+-- Função para atacar inimigos com verificação de Humanoid
+local function attackEnemy(enemy)
+    if not enemy or not enemy:IsA("Model") then return end
+    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("SetAttack", enemy)
+            end
+        end
+    end)
+end
+
+-- Função para Teleportar com Segurança
+local function safeTeleport(targetCFrame)
+    if not LocalPlayer.Character or not LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then return end
+    if Config.Teleport.SafeTeleport then
+        local tweenInfo = TweenInfo.new(2, Enum.EasingStyle.Linear)
+        local tween = TweenService:Create(LocalPlayer.Character.HumanoidRootPart, tweenInfo, {CFrame = targetCFrame})
+        tween:Play()
+        tween.Completed:Wait()
+    else
+        LocalPlayer.Character.HumanoidRootPart.CFrame = targetCFrame
+    end
+end
+
+-- Função para Posicionar o Jogador Acima do Inimigo
+local function positionAboveEnemy(enemy)
+    if not enemy or not enemy:IsA("Model") then return end
+    local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+    if not humanoid or humanoid.Health <= 0 then return end
+
+    local enemyHRP = enemy:FindFirstChild("HumanoidRootPart") or enemy:FindFirstChild("Torso")
+    if not enemyHRP then return end
+
+    pcall(function()
+        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local enemyPos = enemyHRP.Position
+            local abovePos = enemyPos + Vector3.new(0, Config.Farm.SafeDistance, 0)
+            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(abovePos, enemyPos)
+        end
+    end)
+end
+
+-- Função para Detectar Mobs e Bosses Próximos
+local function updateNearbyEnemies()
+    nearbyMobs = {}
+    nearbyBosses = {}
+
+    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+        if enemy:IsA("Model") and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+            local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+            if humanoid and humanoid.Health > 0 then
+                local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                if distance <= Config.Farm.MaxDistance then
+                    if table.find(SeaData[currentSea].Mobs, enemy.Name) then
+                        table.insert(nearbyMobs, enemy.Name .. " (" .. math.floor(distance) .. " studs)")
+                    elseif table.find(SeaData[currentSea].Bosses, enemy.Name) then
+                        table.insert(nearbyBosses, enemy.Name .. " (" .. math.floor(distance) .. " studs)")
+                    end
+                end
+            end
+        end
+    end
+
+    -- Atualizar dropdowns
+    if Tabs.Farm then
+        Tabs.Farm:UpdateDropdown("NearbyMobs", nearbyMobs)
+        Tabs.Farm:UpdateDropdown("NearbyBosses", nearbyBosses)
+    end
+end
+
+-- Função para Pegar Missão de Mob
+local function getMobQuest(mobName)
+    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+        for _, questMob in pairs(SeaData[currentSea].Mobs) do
+            if questMob == mobName then
+                pcall(function()
+                    local npcPos = npc:FindFirstChild("HumanoidRootPart") and npc.HumanoidRootPart.Position or npc.Position
+                    safeTeleport(CFrame.new(npcPos + Vector3.new(0, 5, 0)))
+                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", npc.Name)
+                    end
+                end)
+                break
+            end
+        end
+    end
+end
+
+-- Carregar Fluent
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+-- Criar Interface
+local Window = Fluent:CreateWindow({
+    Title = "Hyper Neon Hub | Blox Fruits",
+    SubTitle = "by xAI",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
+    Farm = Window:AddTab({ Title = "Farm", Icon = "wheat" }),
+    Combat = Window:AddTab({ Title = "Combat", Icon = "swords" }),
+    Quests = Window:AddTab({ Title = "Quests", Icon = "scroll" }),
+    Fruits = Window:AddTab({ Title = "Fruits", Icon = "apple" }),
+    Raids = Window:AddTab({ Title = "Raids", Icon = "zap" }),
+    Teleport = Window:AddTab({ Title = "Teleport", Icon = "map" }),
+    Visuals = Window:AddTab({ Title = "Visuals", Icon = "eye" }),
+    Stats = Window:AddTab({ Title = "Stats", Icon = "bar-chart-2" }),
+    Shop = Window:AddTab({ Title = "Shop", Icon = "shopping-cart" }),
+    Misc = Window:AddTab({ Title = "Misc", Icon = "settings" }),
+    Automation = Window:AddTab({ Title = "Automation", Icon = "bot" }),
+    Events = Window:AddTab({ Title = "Events", Icon = "calendar" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "sliders" })
+}
+
+-- Aba Main
+Tabs.Main:AddParagraph({
+    Title = "Bem-vindo ao Hyper Neon Hub!",
+    Content = "Este script oferece diversas funcionalidades para o Blox Fruits. Use as abas para configurar as opções."
+})
+
+-- Detectar Sea Inicial
+spawn(function()
+    while true do
+        currentSea = detectPlayerSea()
+        wait(10) -- Atualiza a cada 10 segundos
+    end
+end)
+
+-- Atualizar Inimigos Próximos
+spawn(function()
+    while true do
+        updateNearbyEnemies()
+        wait(5)
+    end
+end)
+
+-- Aba Farm
+Tabs.Farm:AddParagraph({
+    Title = "Opções de Farm",
+    Content = "Configure as opções de farm automático. Selecione mobs e bosses próximos para farmar."
+})
+
+Tabs.Farm:AddToggle("AutoFarmMobs", {
+    Title = "Auto Farm Mobs",
+    Default = Config.Farm.AutoFarmMobs,
+    Callback = function(state)
+        Config.Farm.AutoFarmMobs = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmMobs and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    if Config.Farm.SelectedMob == "" then wait(1) continue end
+                    local mobName = Config.Farm.SelectedMob:match("^(.-) %(")
+                    getMobQuest(mobName)
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and enemy.Name == mobName then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddDropdown("NearbyMobs", {
+    Title = "Selecionar Mob Próximo",
+    Values = nearbyMobs,
+    Multi = false,
+    Default = Config.Farm.SelectedMob,
+    Callback = function(value)
+        Config.Farm.SelectedMob = value
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmBoss", {
+    Title = "Auto Farm Boss",
+    Default = Config.Farm.AutoFarmBoss,
+    Callback = function(state)
+        Config.Farm.AutoFarmBoss = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmBoss and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    if Config.Farm.SelectedBoss == "" then wait(1) continue end
+                    local bossName = Config.Farm.SelectedBoss:match("^(.-) %(")
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and enemy.Name == bossName then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddDropdown("NearbyBosses", {
+    Title = "Selecionar Boss Próximo",
+    Values = nearbyBosses,
+    Multi = false,
+    Default = Config.Farm.SelectedBoss,
+    Callback = function(value)
+        Config.Farm.SelectedBoss = value
+    end
+})
+
+Tabs.Farm:AddSlider("SafeDistance", {
+    Title = "Distância Segura",
+    Description = "Distância acima do inimigo",
+    Min = 5,
+    Max = 20,
+    Default = Config.Farm.SafeDistance,
+    Callback = function(value)
+        Config.Farm.SafeDistance = value
+    end
+})
+
+Tabs.Farm:AddSlider("MaxDistance", {
+    Title = "Distância Máxima",
+    Description = "Distância máxima para farmar",
+    Min = 100,
+    Max = 2000,
+    Default = Config.Farm.MaxDistance,
+    Callback = function(value)
+        Config.Farm.MaxDistance = value
+    end
+})
+
+Tabs.Farm:AddToggle("FarmAboveEnemy", {
+    Title = "Farmar Acima do Inimigo",
+    Default = Config.Farm.FarmAboveEnemy,
+    Callback = function(state)
+        Config.Farm.FarmAboveEnemy = state
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmMaterials", {
+    Title = "Auto Farm Materiais",
+    Default = Config.Farm.AutoFarmMaterials,
+    Callback = function(state)
+        Config.Farm.AutoFarmMaterials = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmMaterials and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, material in pairs(workspace:GetDescendants()) do
+                        if material.Name:find(Config.Farm.SelectedMaterial) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (material.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                pcall(function()
+                                    safeTeleport(CFrame.new(material.Position + Vector3.new(0, 5, 0)))
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("CollectMaterial", material)
+                                    end
+                                end)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddDropdown("SelectedMaterial", {
+    Title = "Selecionar Material",
+    Values = SeaData[currentSea].Materials,
+    Multi = false,
+    Default = Config.Farm.SelectedMaterial,
+    Callback = function(value)
+        Config.Farm.SelectedMaterial = value
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmSeaBeasts", {
+    Title = "Auto Farm Sea Beasts",
+    Default = Config.Farm.AutoFarmSeaBeasts,
+    Callback = function(state)
+        Config.Farm.AutoFarmSeaBeasts = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmSeaBeasts and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, seaBeast in pairs(workspace.SeaBeasts:GetChildren()) do
+                        if seaBeast:IsA("Model") then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (seaBeast.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(seaBeast)
+                                end
+                                attackEnemy(seaBeast)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmMasteryMelee", {
+    Title = "Auto Farm Mastery (Melee)",
+    Default = Config.Farm.AutoFarmMasteryMelee,
+    Callback = function(state)
+        Config.Farm.AutoFarmMasteryMelee = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmMasteryMelee and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("IncreaseMastery", "Melee", enemy)
+                                    end
+                                end)
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmMasterySword", {
+    Title = "Auto Farm Mastery (Sword)",
+    Default = Config.Farm.AutoFarmMasterySword,
+    Callback = function(state)
+        Config.Farm.AutoFarmMasterySword = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmMasterySword and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("IncreaseMastery", "Sword", enemy)
+                                    end
+                                end)
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmMasteryGun", {
+    Title = "Auto Farm Mastery (Gun)",
+    Default = Config.Farm.AutoFarmMasteryGun,
+    Callback = function(state)
+        Config.Farm.AutoFarmMasteryGun = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmMasteryGun and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("IncreaseMastery", "Gun", enemy)
+                                    end
+                                end)
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Farm:AddToggle("AutoFarmMasteryFruit", {
+    Title = "Auto Farm Mastery (Fruit)",
+    Default = Config.Farm.AutoFarmMasteryFruit,
+    Callback = function(state)
+        Config.Farm.AutoFarmMasteryFruit = state
+        if state then
+            spawn(function()
+                while Config.Farm.AutoFarmMasteryFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("IncreaseMastery", "Fruit", enemy)
+                                    end
+                                end)
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+-- Aba Combat
+Tabs.Combat:AddParagraph({
+    Title = "Opções de Combate",
+    Content = "Configure as opções de combate. Apenas inimigos e frutas do seu Sea atual serão exibidos."
+})
+
+Tabs.Combat:AddToggle("ESPEnabled", {
+    Title = "ESP de Frutas",
+    Default = Config.Combat.ESPEnabled,
+    Callback = function(state)
+        Config.Combat.ESPEnabled = state
+        if not state then
+            for _, v in pairs(workspace:GetDescendants()) do
+                if v:FindFirstChild("ESP_HyperNeon") then
+                    v.ESP_HyperNeon:Destroy()
+                end
+            end
+        else
+            spawn(function()
+                while Config.Combat.ESPEnabled do
+                    for _, v in pairs(workspace:GetDescendants()) do
+                        if (v.Name:find("Fruit") or v.Name:find("DevilFruit")) and not v.Name:find("sail_boat2") and not v:FindFirstChild("ESP_HyperNeon") then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (v.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Combat.ESPDistance then
+                                pcall(function()
+                                    local billboard = Instance.new("BillboardGui", v)
+                                    billboard.Name = "ESP_HyperNeon"
+                                    billboard.Size = UDim2.new(0, 100, 0, 30)
+                                    billboard.StudsOffset = Vector3.new(0, 3, 0)
+                                    billboard.AlwaysOnTop = true
+
+                                    local textLabel = Instance.new("TextLabel", billboard)
+                                    textLabel.Size = UDim2.new(1, 0, 1, 0)
+                                    textLabel.BackgroundTransparency = 1
+                                    textLabel.Text = v.Name
+                                    textLabel.TextColor3 = Config.Combat.ESPColor
+                                    textLabel.TextScaled = true
+
+                                    spawn(function()
+                                        while Config.Combat.ESPEnabled and v and v.Parent and LocalPlayer.Character do
+                                            local distance = (v.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                                            textLabel.Text = v.Name .. " (" .. math.floor(distance) .. " studs)"
+                                            wait(0.1)
+                                        end
+                                        if billboard then billboard:Destroy() end
+                                    end)
+                                end)
+                            end
+                        end
+                    end
+                    wait(1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddColorPicker("ESPColor", {
+    Title = "Cor do ESP",
+    Default = Config.Combat.ESPColor,
+    Callback = function(value)
+        Config.Combat.ESPColor = value
+    end
+})
+
+Tabs.Combat:AddSlider("ESPDistance", {
+    Title = "Distância Máxima do ESP",
+    Description = "Distância máxima para exibir o ESP",
+    Min = 100,
+    Max = 5000,
+    Default = Config.Combat.ESPDistance,
+    Callback = function(value)
+        Config.Combat.ESPDistance = value
+    end
+})
+
+Tabs.Combat:AddToggle("AimBotEnabled", {
+    Title = "AimBot",
+    Default = Config.Combat.AimBotEnabled,
+    Callback = function(state)
+        Config.Combat.AimBotEnabled = state
+        if state then
+            spawn(function()
+                while Config.Combat.AimBotEnabled and LocalPlayer.Character do
+                    local closestEnemy = nil
+                    local closestDistance = Config.Combat.AimBotFOV
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+                        if humanoid and humanoid.Health > 0 and LocalPlayer.Character and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if distance <= closestDistance then
+                                closestDistance = distance
+                                closestEnemy = enemy
+                            end
+                        end
+                    end
+                    if closestEnemy then
+                        pcall(function()
+                            local camera = workspace.CurrentCamera
+                            camera.CFrame = CFrame.new(camera.CFrame.Position, closestEnemy.HumanoidRootPart.Position)
+                        end)
+                    end
+                    wait(0.05)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddSlider("AimBotFOV", {
+    Title = "FOV do AimBot",
+    Description = "Campo de visão do AimBot",
+    Min = 50,
+    Max = 500,
+    Default = Config.Combat.AimBotFOV,
+    Callback = function(value)
+        Config.Combat.AimBotFOV = value
+    end
+})
+
+Tabs.Combat:AddToggle("KillAura", {
+    Title = "Kill Aura",
+    Default = Config.Combat.KillAura,
+    Callback = function(state)
+        Config.Combat.KillAura = state
+        if state then
+            spawn(function()
+                while Config.Combat.KillAura and LocalPlayer.Character do
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= 30 then
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddToggle("AutoSkill", {
+    Title = "Auto Usar Habilidades",
+    Default = Config.Combat.AutoSkill,
+    Callback = function(state)
+        Config.Combat.AutoSkill = state
+        if state then
+            spawn(function()
+                while Config.Combat.AutoSkill and LocalPlayer.Character do
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("UseSkill", "All")
+                        end
+                    end)
+                    wait(1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddToggle("AutoClick", {
+    Title = "Auto Click",
+    Default = Config.Combat.AutoClick,
+    Callback = function(state)
+        Config.Combat.AutoClick = state
+        if state then
+            spawn(function()
+                while Config.Combat.AutoClick and LocalPlayer.Character do
+                    pcall(function()
+                        VirtualUser:ClickButton1(Vector2.new(0, 0))
+                    end)
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddToggle("AutoGodMode", {
+    Title = "Auto God Mode",
+    Default = Config.Combat.AutoGodMode,
+    Callback = function(state)
+        Config.Combat.AutoGodMode = state
+        if state then
+            spawn(function()
+                while Config.Combat.AutoGodMode and LocalPlayer.Character do
+                    pcall(function()
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                            LocalPlayer.Character.Humanoid.MaxHealth = math.huge
+                            LocalPlayer.Character.Humanoid.Health = math.huge
+                        end
+                    end)
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddToggle("InfiniteStamina", {
+    Title = "Stamina Infinita",
+    Default = Config.Combat.InfiniteStamina,
+    Callback = function(state)
+        Config.Combat.InfiniteStamina = state
+        if state then
+            spawn(function()
+                while Config.Combat.InfiniteStamina and LocalPlayer.Character do
+                    pcall(function()
+                        if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+                            LocalPlayer.Character.Humanoid.Stamina = math.huge
+                        end
+                    end)
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddToggle("AutoDodge", {
+    Title = "Auto Dodge",
+    Default = Config.Combat.AutoDodge,
+    Callback = function(state)
+        Config.Combat.AutoDodge = state
+        if state then
+            spawn(function()
+                while Config.Combat.AutoDodge and LocalPlayer.Character do
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Combat.DodgeDistance then
+                                pcall(function()
+                                    local dodgePos = LocalPlayer.Character.HumanoidRootPart.Position + Vector3.new(math.random(-10, 10), 0, math.random(-10, 10))
+                                    safeTeleport(CFrame.new(dodgePos))
+                                end)
+                            end
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddSlider("DodgeDistance", {
+    Title = "Distância de Dodge",
+    Description = "Distância para desviar de ataques",
+    Min = 10,
+    Max = 50,
+    Default = Config.Combat.DodgeDistance,
+    Callback = function(value)
+        Config.Combat.DodgeDistance = value
+    end
+})
+
+Tabs.Combat:AddToggle("AutoBlock", {
+    Title = "Auto Block",
+    Default = Config.Combat.AutoBlock,
+    Callback = function(state)
+        Config.Combat.AutoBlock = state
+        if state then
+            spawn(function()
+                while Config.Combat.AutoBlock and LocalPlayer.Character do
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Combat.DodgeDistance then
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("Block", true)
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Combat:AddToggle("AutoParry", {
+    Title = "Auto Parry",
+    Default = Config.Combat.AutoParry,
+    Callback = function(state)
+        Config.Combat.AutoParry = state
+        if state then
+            spawn(function()
+                while Config.Combat.AutoParry and LocalPlayer.Character do
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Combat.DodgeDistance then
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("Parry", true)
+                                    end
+                                end)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+-- Aba Quests
+Tabs.Quests:AddParagraph({
+    Title = "Opções de Missões",
+    Content = "Configure as opções de missões automáticas."
+})
+
+Tabs.Quests:AddToggle("AutoQuest", {
+    Title = "Auto Quest",
+    Default = Config.Quests.AutoQuest,
+    Callback = function(state)
+        Config.Quests.AutoQuest = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoQuest and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+                        if npc:IsA("Model") and table.find(SeaData[currentSea].NPCs, npc.Name) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (npc.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= 1000 then
+                                pcall(function()
+                                    local npcPos = npc:FindFirstChild("HumanoidRootPart") and npc.HumanoidRootPart.Position or npc.Position
+                                    safeTeleport(CFrame.new(npcPos + Vector3.new(0, 5, 0)))
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", npc.Name)
+                                    end
+                                end)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Quests:AddDropdown("SelectedNPC", {
+    Title = "Selecionar NPC",
+    Values = SeaData[currentSea].NPCs,
+    Multi = false,
+    Default = Config.Quests.SelectedNPC,
+    Callback = function(value)
+        Config.Quests.SelectedNPC = value
+    end
+})
+
+Tabs.Quests:AddToggle("AutoEliteHunter", {
+    Title = "Auto Elite Hunter",
+    Default = Config.Quests.AutoEliteHunter,
+    Callback = function(state)
+        Config.Quests.AutoEliteHunter = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoEliteHunter and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+                        if npc.Name == "Elite Hunter" then
+                            pcall(function()
+                                local npcPos = npc:FindFirstChild("HumanoidRootPart") and npc.HumanoidRootPart.Position or npc.Position
+                                safeTeleport(CFrame.new(npcPos + Vector3.new(0, 5, 0)))
+                                if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("EliteHunter")
+                                end
+                            end)
+                            wait(randomDelay)
+                        end
+                    end
+                    wait(1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Quests:AddToggle("AutoLegendarySwordQuest", {
+    Title = "Auto Legendary Sword Quest",
+    Default = Config.Quests.AutoLegendarySwordQuest,
+    Callback = function(state)
+        Config.Quests.AutoLegendarySwordQuest = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoLegendarySwordQuest and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("LegendarySwordQuest")
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Quests:AddToggle("AutoRaceV4", {
+    Title = "Auto Race V4",
+    Default = Config.Quests.AutoRaceV4,
+    Callback = function(state)
+        Config.Quests.AutoRaceV4 = state
+        if state and currentSea == 3 then
+            spawn(function()
+                while Config.Quests.AutoRaceV4 and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("UpgradeRace", "V4")
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        elseif state and currentSea ~= 3 then
+            notify("Hyper Neon Hub", "Auto Race V4 só funciona no Sea 3!", 5)
+            Config.Quests.AutoRaceV4 = false
+        end
+    end
+})
+
+Tabs.Quests:AddToggle("AutoDarkbeard", {
+    Title = "Auto Darkbeard",
+    Default = Config.Quests.AutoDarkbeard,
+    Callback = function(state)
+        Config.Quests.AutoDarkbeard = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoDarkbeard and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy.Name == "Darkbeard" then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Quests:AddToggle("AutoRipIndra", {
+    Title = "Auto Rip Indra",
+    Default = Config.Quests.AutoRipIndra,
+    Callback = function(state)
+        Config.Quests.AutoRipIndra = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoRipIndra and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy.Name == "rip_indra" then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Quests:AddToggle("AutoTushitaQuest", {
+    Title = "Auto Tushita Quest",
+    Default = Config.Quests.AutoTushitaQuest,
+    Callback = function(state)
+        Config.Quests.AutoTushitaQuest = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoTushitaQuest and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("TushitaQuest")
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Quests:AddToggle("AutoYamaQuest", {
+    Title = "Auto Yama Quest",
+    Default = Config.Quests.AutoYamaQuest,
+    Callback = function(state)
+        Config.Quests.AutoYamaQuest = state
+        if state then
+            spawn(function()
+                while Config.Quests.AutoYamaQuest and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("YamaQuest")
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+-- Aba Fruits
+Tabs.Fruits:AddParagraph({
+    Title = "Opções de Frutas",
+    Content = "Configure as opções de coleta e gerenciamento de frutas."
+})
+
+Tabs.Fruits:AddToggle("AutoCollectFruits", {
+    Title = "Auto Coletar Frutas",
+    Default = Config.Fruits.AutoCollectFruits,
+    Callback = function(state)
+        Config.Fruits.AutoCollectFruits = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoCollectFruits and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, fruit in pairs(workspace:GetDescendants()) do
+                        if (fruit.Name:find("Fruit") or fruit.Name:find("DevilFruit")) and not fruit.Name:find("sail_boat2") then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (fruit.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= 1000 then
+                                pcall(function()
+                                    safeTeleport(CFrame.new(fruit.Position))
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("CollectFruit", fruit)
+                                    end
+                                    sendWebhook("Coletou fruta: " .. fruit.Name)
+                                end)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoStoreFruits", {
+    Title = "Auto Armazenar Frutas",
+    Default = Config.Fruits.AutoStoreFruits,
+    Callback = function(state)
+        Config.Fruits.AutoStoreFruits = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoStoreFruits and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("StoreAllFruits")
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoEatFruit", {
+    Title = "Auto Comer Fruta",
+    Default = Config.Fruits.AutoEatFruit,
+    Callback = function(state)
+        Config.Fruits.AutoEatFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoEatFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if LocalPlayer.Backpack:FindFirstChildOfClass("Tool") and LocalPlayer.Backpack:FindFirstChildOfClass("Tool").Name:find("Fruit") then
+                            local fruit = LocalPlayer.Backpack:FindFirstChildOfClass("Tool")
+                            LocalPlayer.Character.Humanoid:EquipTool(fruit)
+                            if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                ReplicatedStorage.Remotes.CommF_:InvokeServer("EatFruit", fruit)
+                            end
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoSnipeFruit", {
+    Title = "Auto Snipe Fruta",
+    Default = Config.Fruits.AutoSnipeFruit,
+    Callback = function(state)
+        Config.Fruits.AutoSnipeFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoSnipeFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, fruit in pairs(workspace:GetDescendants()) do
+                        if (fruit.Name:find("Fruit") or fruit.Name:find("DevilFruit")) and not fruit.Name:find("sail_boat2") and fruit.Name:find(Config.Fruits.SnipeFruitName) then
+                            pcall(function()
+                                safeTeleport(CFrame.new(fruit.Position))
+                                if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("CollectFruit", fruit)
+                                    notify("Hyper Neon Hub", "Sniped fruta: " .. fruit.Name, 5)
+                                    sendWebhook("Sniped fruta: " .. fruit.Name)
+                                end
+                            end)
+                            wait(randomDelay)
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddDropdown("SnipeFruitName", {
+    Title = "Selecionar Fruta para Snipe",
+    Values = ValuableFruits,
+    Multi = false,
+    Default = Config.Fruits.SnipeFruitName,
+    Callback = function(value)
+        Config.Fruits.SnipeFruitName = value
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoFarmFruitMastery", {
+    Title = "Auto Farm Mastery (Fruit)",
+    Default = Config.Fruits.AutoFarmFruitMastery,
+    Callback = function(state)
+        Config.Fruits.AutoFarmFruitMastery = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoFarmFruitMastery and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and (table.find(SeaData[currentSea].Mobs, enemy.Name) or table.find(SeaData[currentSea].Bosses, enemy.Name)) then
+                            local distance = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") and (enemy.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude or math.huge
+                            if distance <= Config.Farm.MaxDistance then
+                                if Config.Farm.FarmAboveEnemy then
+                                    positionAboveEnemy(enemy)
+                                end
+                                pcall(function()
+                                    if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                        ReplicatedStorage.Remotes.CommF_:InvokeServer("IncreaseMastery", "Fruit", enemy)
+                                    end
+                                end)
+                                attackEnemy(enemy)
+                                wait(randomDelay)
+                            end
+                        end
+                    end
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoFindLegendaryFruit", {
+    Title = "Auto Encontrar Fruta Lendária",
+    Default = Config.Fruits.AutoFindLegendaryFruit,
+    Callback = function(state)
+        Config.Fruits.AutoFindLegendaryFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoFindLegendaryFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, fruit in pairs(workspace:GetDescendants()) do
+                        if (fruit.Name:find("Fruit") or fruit.Name:find("DevilFruit")) and not fruit.Name:find("sail_boat2") then
+                            for _, legendaryFruit in pairs(ValuableFruits) do
+                                if fruit.Name:find(legendaryFruit) then
+                                    pcall(function()
+                                        safeTeleport(CFrame.new(fruit.Position))
+                                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                            ReplicatedStorage.Remotes.CommF_:InvokeServer("CollectFruit", fruit)
+                                            notify("Hyper Neon Hub", "Encontrou fruta lendária: " .. fruit.Name, 5)
+                                            sendWebhook("Encontrou fruta lendária: " .. fruit.Name)
+                                        end
+                                    end)
+                                    wait(randomDelay)
+                                end
+                            end
+                        end
+                    end
+                    wait(0.5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoAwakenFruit", {
+    Title = "Auto Despertar Fruta",
+    Default = Config.Fruits.AutoAwakenFruit,
+    Callback = function(state)
+        Config.Fruits.AutoAwakenFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoAwakenFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Awakening") then
+                            ReplicatedStorage.Remotes.Awakening:InvokeServer("Awaken")
+                            sendWebhook("Tentou despertar fruta!")
+                        end
+                    end)
+                    wait(10)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoTradeLegendaryFruit", {
+    Title = "Auto Trocar Fruta Lendária",
+    Default = Config.Fruits.AutoTradeLegendaryFruit,
+    Callback = function(state)
+        Config.Fruits.AutoTradeLegendaryFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoTradeLegendaryFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("TradeLegendaryFruit")
+                            sendWebhook("Trocou uma fruta lendária!")
+                        end
+                    end)
+                    wait(10)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoStoreAllFruits", {
+    Title = "Auto Armazenar Todas as Frutas",
+    Default = Config.Fruits.AutoStoreAllFruits,
+    Callback = function(state)
+        Config.Fruits.AutoStoreAllFruits = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoStoreAllFruits and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        for _, fruit in pairs(LocalPlayer.Backpack:GetChildren()) do
+                            if fruit:IsA("Tool") and fruit.Name:find("Fruit") then
+                                if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StoreFruit", fruit)
+                                    sendWebhook("Armazenou fruta: " .. fruit.Name)
+                                end
+                            end
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Fruits:AddToggle("AutoDropFruit", {
+    Title = "Auto Dropar Fruta",
+    Default = Config.Fruits.AutoDropFruit,
+    Callback = function(state)
+        Config.Fruits.AutoDropFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoDropFruit and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        for _, fruit in pairs(LocalPlayer.Backpack:GetChildren()) do
+                            if fruit:IsA("Tool") and fruit.Name:find("Fruit") then
+                                LocalPlayer.Character.Humanoid:EquipTool(fruit)
+                                fruit.Parent = workspace
+                                sendWebhook("Dropou fruta: " .. fruit.Name)
+                            end
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+-- Aba Raids
+Tabs.Raids:AddParagraph({
+    Title = "Opções de Raids",
+    Content = "Configure as opções de raids automáticas."
+})
+
+Tabs.Raids:AddToggle("AutoRaid", {
+    Title = "Auto Raid",
+    Default = Config.Raids.AutoRaid,
+    Callback = function(state)
+        Config.Raids.AutoRaid = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoRaid and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("StartRaid", Config.Raids.SelectedRaid)
+                            sendWebhook("Iniciou raid: " .. Config.Raids.SelectedRaid)
+                        end
+                    end)
+                    wait(30)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Raids:AddDropdown("SelectedRaid", {
+    Title = "Selecionar Raid",
+    Values = {"Law Raid", "Flame Raid", "Dark Raid", "Ice Raid"},
+    Multi = false,
+    Default = Config.Raids.SelectedRaid,
+    Callback = function(value)
+        Config.Raids.SelectedRaid = value
+    end
+})
+
+Tabs.Raids:AddToggle("AutoBuyChip", {
+    Title = "Auto Comprar Chip",
+    Default = Config.Raids.AutoBuyChip,
+    Callback = function(state)
+        Config.Raids.AutoBuyChip = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoBuyChip and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyChip", Config.Raids.SelectedRaid)
+                        end
+                    end)
+                    wait(5)
+                end
+            end)
+        end
+    end
+})
+
+Tabs.Raids:AddToggle("AutoAwaken", {
+    Title = "Auto Awakening",
+    Default = Config.Raids.AutoAwaken,
+    Callback = function(state)
+        Config.Raids.AutoAwaken = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoAwaken and LocalPlayer.Character do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Awakening") then
+                            ReplicatedStorage.Remotes.Awakening
