@@ -1,6 +1,6 @@
 -- Hyper Neon Hub para Blox Fruits (Update 24, Abril de 2025)
--- Um script completo com mais de 2.000 linhas, otimizado e funcional
--- Interface moderna inspirada em Redz Hub, com abas e configurações avançadas
+-- Script completo com mais de 2.000 linhas, otimizado e funcional
+-- Interface moderna com Fluent Library, com abas e configurações avançadas
 -- Inclui bypass de anti-cheat, otimização de desempenho e novas funcionalidades
 -- Use em uma conta alternativa para minimizar riscos de ban
 
@@ -20,6 +20,11 @@ local StarterGui = game:GetService("StarterGui")
 
 -- Garantir que PlayerGui esteja carregado
 LocalPlayer:WaitForChild("PlayerGui", 10)
+
+-- Carregar Biblioteca Fluent e Add-ons
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
 -- Tabela de Configurações
 local Config = {
@@ -190,467 +195,44 @@ local function logMessage(message)
 end
 
 -- Sistema de Notificações
-local function notify(message, duration)
+local function notify(title, content, duration)
     if not Config.General.NotificationEnabled then return end
-    StarterGui:SetCore("SendNotification", {
-        Title = "Hyper Neon Hub",
-        Text = message,
-        Duration = duration or 5,
-        Icon = "rbxassetid://7072724"
+    Fluent:Notify({
+        Title = title,
+        Content = content,
+        Duration = duration or 5
     })
 end
 
--- Carregar Biblioteca de UI (Inspirada em Redz Hub)
-local RedzLib = {
-    Windows = {},
-    MakeWindow = function(options)
-        local window = {
-            Tabs = {},
-            Name = options.Name or "Hyper Neon Hub",
-            Theme = options.Theme or "Dark",
-            Icon = options.Icon or "rbxassetid://7072724",
-            Visible = true,
-        }
-        local ScreenGui = Instance.new("ScreenGui")
-        ScreenGui.Name = "HyperNeonHub"
-        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-        ScreenGui.ResetOnSpawn = false
-        ScreenGui.IgnoreGuiInset = true
-
-        local MainFrame = Instance.new("Frame")
-        MainFrame.Size = UDim2.new(0, 500, 0, 600)
-        MainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)
-        MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-        MainFrame.BorderSizePixel = 0
-        MainFrame.Parent = ScreenGui
-        MainFrame.ClipsDescendants = true
-
-        local UICorner = Instance.new("UICorner")
-        UICorner.CornerRadius = UDim.new(0, 12)
-        UICorner.Parent = MainFrame
-
-        local TitleBar = Instance.new("Frame")
-        TitleBar.Size = UDim2.new(1, 0, 0, 50)
-        TitleBar.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-        TitleBar.BorderSizePixel = 0
-        TitleBar.Parent = MainFrame
-
-        local TitleLabel = Instance.new("TextLabel")
-        TitleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-        TitleLabel.Position = UDim2.new(0.15, 0, 0, 0)
-        TitleLabel.BackgroundTransparency = 1
-        TitleLabel.Text = window.Name
-        TitleLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
-        TitleLabel.TextScaled = true
-        TitleLabel.Font = Enum.Font.GothamBold
-        TitleLabel.Parent = TitleBar
-
-        local Sidebar = Instance.new("Frame")
-        Sidebar.Size = UDim2.new(0, 60, 1, -80)
-        Sidebar.Position = UDim2.new(0, 5, 0, 55)
-        Sidebar.BackgroundTransparency = 1
-        Sidebar.Parent = MainFrame
-
-        local SidebarLayout = Instance.new("UIListLayout")
-        SidebarLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        SidebarLayout.Padding = UDim.new(0, 5)
-        SidebarLayout.Parent = Sidebar
-
-        window.ScreenGui = ScreenGui
-        window.MainFrame = MainFrame
-        window.Sidebar = Sidebar
-
-        function window:MakeTab(options)
-            local tab = {
-                Name = options.Name or "Tab",
-                Icon = options.Icon or "rbxassetid://7072715",
-                Elements = {},
-                Frame = nil,
-            }
-
-            local TabFrame = Instance.new("ScrollingFrame")
-            TabFrame.Size = UDim2.new(0, 420, 1, -110)
-            TabFrame.Position = UDim2.new(0, 70, 0, 55)
-            TabFrame.BackgroundTransparency = 1
-            TabFrame.Visible = false
-            TabFrame.Parent = MainFrame
-            TabFrame.CanvasSize = UDim2.new(0, 0, 10, 0)
-            TabFrame.ScrollBarThickness = 6
-
-            local TabListLayout = Instance.new("UIListLayout")
-            TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            TabListLayout.Padding = UDim.new(0, 8)
-            TabListLayout.Parent = TabFrame
-
-            local CategoryButton = Instance.new("ImageButton")
-            CategoryButton.Size = UDim2.new(0, 50, 0, 50)
-            CategoryButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            CategoryButton.Image = tab.Icon
-            CategoryButton.Parent = Sidebar
-
-            local ButtonCorner = Instance.new("UICorner")
-            ButtonCorner.CornerRadius = UDim.new(0, 8)
-            ButtonCorner.Parent = CategoryButton
-
-            CategoryButton.MouseButton1Click:Connect(function()
-                for _, t in pairs(window.Tabs) do
-                    t.Frame.Visible = t.Name == tab.Name
-                    t.Button.BackgroundColor3 = t.Name == tab.Name and Color3.fromRGB(50, 50, 50) or Color3.fromRGB(30, 30, 30)
-                end
-            end)
-
-            tab.Frame = TabFrame
-            tab.Button = CategoryButton
-            table.insert(window.Tabs, tab)
-
-            function tab:MakeLabel(options)
-                local label = Instance.new("TextLabel")
-                label.Size = UDim2.new(1, 0, 0, 30)
-                label.BackgroundTransparency = 1
-                label.Text = options.Text or "Label"
-                label.TextColor3 = Color3.fromRGB(255, 0, 0)
-                label.TextScaled = true
-                label.TextXAlignment = Enum.TextXAlignment.Left
-                label.Font = Enum.Font.GothamBold
-                label.Parent = TabFrame
-            end
-
-            function tab:MakeToggle(options)
-                local toggleFrame = Instance.new("Frame")
-                toggleFrame.Size = UDim2.new(1, 0, 0, 30)
-                toggleFrame.BackgroundTransparency = 1
-                toggleFrame.Parent = TabFrame
-
-                local toggleLabel = Instance.new("TextLabel")
-                toggleLabel.Size = UDim2.new(0.7, 0, 1, 0)
-                toggleLabel.BackgroundTransparency = 1
-                toggleLabel.Text = options.Text or "Toggle"
-                toggleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                toggleLabel.TextScaled = true
-                toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-                toggleLabel.Font = Enum.Font.Gotham
-                toggleLabel.Parent = toggleFrame
-
-                local toggleButton = Instance.new("TextButton")
-                toggleButton.Size = UDim2.new(0, 50, 0, 20)
-                toggleButton.Position = UDim2.new(1, -50, 0, 5)
-                toggleButton.BackgroundColor3 = options.Default and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 50, 50)
-                toggleButton.Text = options.Default and "ON" or "OFF"
-                toggleButton.TextColor3 = options.Default and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-                toggleButton.TextScaled = true
-                toggleButton.Font = Enum.Font.Gotham
-                toggleButton.Parent = toggleFrame
-
-                local toggleCorner = Instance.new("UICorner")
-                toggleCorner.CornerRadius = UDim.new(0, 10)
-                toggleCorner.Parent = toggleButton
-
-                toggleButton.MouseButton1Click:Connect(function()
-                    options.Default = not options.Default
-                    toggleButton.BackgroundColor3 = options.Default and Color3.fromRGB(50, 200, 50) or Color3.fromRGB(50, 50, 50)
-                    toggleButton.Text = options.Default and "ON" or "OFF"
-                    toggleButton.TextColor3 = options.Default and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-                    if options.Callback then
-                        options.Callback(options.Default)
-                    end
-                end)
-            end
-
-            function tab:MakeDropdown(options)
-                local dropdownFrame = Instance.new("Frame")
-                dropdownFrame.Size = UDim2.new(1, 0, 0, 30)
-                dropdownFrame.BackgroundTransparency = 1
-                dropdownFrame.Parent = TabFrame
-
-                local dropdownLabel = Instance.new("TextLabel")
-                dropdownLabel.Size = UDim2.new(0.7, 0, 1, 0)
-                dropdownLabel.BackgroundTransparency = 1
-                dropdownLabel.Text = options.Text .. ": " .. options.Default
-                dropdownLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                dropdownLabel.TextScaled = true
-                dropdownLabel.TextXAlignment = Enum.TextXAlignment.Left
-                dropdownLabel.Font = Enum.Font.Gotham
-                dropdownLabel.Parent = dropdownFrame
-
-                local dropdownButton = Instance.new("TextButton")
-                dropdownButton.Size = UDim2.new(0, 30, 0, 30)
-                dropdownButton.Position = UDim2.new(1, -30, 0, 0)
-                dropdownButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                dropdownButton.Text = "▼"
-                dropdownButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                dropdownButton.TextScaled = true
-                dropdownButton.Font = Enum.Font.Gotham
-                dropdownButton.Parent = dropdownFrame
-
-                local dropdownList = Instance.new("Frame")
-                dropdownList.Size = UDim2.new(1, 0, 0, 0)
-                dropdownList.Position = UDim2.new(0, 0, 1, 0)
-                dropdownList.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                dropdownList.Visible = false
-                dropdownList.Parent = dropdownFrame
-                dropdownList.ClipsDescendants = true
-
-                local listLayout = Instance.new("UIListLayout")
-                listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                listLayout.Parent = dropdownList
-
-                for _, option in pairs(options.Options) do
-                    local optionButton = Instance.new("TextButton")
-                    optionButton.Size = UDim2.new(1, 0, 0, 30)
-                    optionButton.BackgroundTransparency = 1
-                    optionButton.Text = option
-                    optionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                    optionButton.TextScaled = true
-                    optionButton.Font = Enum.Font.Gotham
-                    optionButton.Parent = dropdownList
-
-                    optionButton.MouseButton1Click:Connect(function()
-                        options.Default = option
-                        dropdownLabel.Text = options.Text .. ": " .. option
-                        dropdownList.Visible = false
-                        if options.Callback then
-                            options.Callback(option)
-                        end
-                    end)
-
-                    dropdownList.Size = UDim2.new(1, 0, 0, listLayout.AbsoluteContentSize.Y)
-                end
-
-                dropdownButton.MouseButton1Click:Connect(function()
-                    dropdownList.Visible = not dropdownList.Visible
-                end)
-            end
-
-            function tab:MakeSlider(options)
-                local sliderFrame = Instance.new("Frame")
-                sliderFrame.Size = UDim2.new(1, 0, 0, 50)
-                sliderFrame.BackgroundTransparency = 1
-                sliderFrame.Parent = TabFrame
-
-                local sliderLabel = Instance.new("TextLabel")
-                sliderLabel.Size = UDim2.new(1, 0, 0, 20)
-                sliderLabel.BackgroundTransparency = 1
-                sliderLabel.Text = options.Text .. ": " .. options.Default
-                sliderLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-             sliderLabel.TextScaled = true
-                sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-                sliderLabel.Font = Enum.Font.Gotham
-                sliderLabel.Parent = sliderFrame
-
-                local slider = Instance.new("TextButton")
-                slider.Size = UDim2.new(1, 0, 0, 10)
-                slider.Position = UDim2.new(0, 0, 0, 30)
-                slider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                slider.Text = ""
-                slider.Parent = sliderFrame
-
-                local sliderFill = Instance.new("Frame")
-                sliderFill.Size = UDim2.new((options.Default - options.Min) / (options.Max - options.Min), 0, 1, 0)
-                sliderFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                sliderFill.Parent = slider
-
-                local draggingSlider = false
-
-                slider.MouseButton1Down:Connect(function()
-                    draggingSlider = true
-                end)
-
-                UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        draggingSlider = false
-                    end
-                end)
-
-                UserInputService.InputChanged:Connect(function(input)
-                    if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        local mousePos = UserInputService:GetMouseLocation()
-                        local relativePos = mousePos - slider.AbsolutePosition
-                        local percentage = math.clamp(relativePos.X / slider.AbsoluteSize.X, 0, 1)
-                        local value = math.floor(options.Min + (options.Max - options.Min) * percentage)
-                        sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
-                        sliderLabel.Text = options.Text .. ": " .. value
-                        options.Default = value
-                        if options.Callback then
-                            options.Callback(value)
-                        end
-                    end
-                end)
-            end
-
-            function tab:MakeColorPicker(options)
-                local colorPickerFrame = Instance.new("Frame")
-                colorPickerFrame.Size = UDim2.new(1, 0, 0, 50)
-                colorPickerFrame.BackgroundTransparency = 1
-                colorPickerFrame.Parent = TabFrame
-
-                local colorPickerLabel = Instance.new("TextLabel")
-                colorPickerLabel.Size = UDim2.new(0.7, 0, 1, 0)
-                colorPickerLabel.BackgroundTransparency = 1
-                colorPickerLabel.Text = options.Text
-                colorPickerLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                colorPickerLabel.TextScaled = true
-                colorPickerLabel.TextXAlignment = Enum.TextXAlignment.Left
-                colorPickerLabel.Font = Enum.Font.Gotham
-                colorPickerLabel.Parent = colorPickerFrame
-
-                local colorPreview = Instance.new("Frame")
-                colorPreview.Size = UDim2.new(0, 30, 0, 30)
-                colorPreview.Position = UDim2.new(1, -30, 0, 10)
-                colorPreview.BackgroundColor3 = options.Default
-                colorPreview.Parent = colorPickerFrame
-
-                local colorPickerButton = Instance.new("TextButton")
-                colorPickerButton.Size = UDim2.new(0, 30, 0, 30)
-                colorPickerButton.Position = UDim2.new(1, -60, 0, 10)
-                colorPickerButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                colorPickerButton.Text = "🎨"
-                colorPickerButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                colorPickerButton.TextScaled = true
-                colorPickerButton.Parent = colorPickerFrame
-
-                local colorPickerWindow = Instance.new("Frame")
-                colorPickerWindow.Size = UDim2.new(0, 200, 0, 150)
-                colorPickerWindow.Position = UDim2.new(1, -200, 1, 0)
-                colorPickerWindow.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                colorPickerWindow.Visible = false
-                colorPickerWindow.Parent = colorPickerFrame
-
-                local rSlider = Instance.new("TextButton")
-                rSlider.Size = UDim2.new(1, -10, 0, 10)
-                rSlider.Position = UDim2.new(0, 5, 0, 20)
-                rSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                rSlider.Text = ""
-                rSlider.Parent = colorPickerWindow
-
-                local rFill = Instance.new("Frame")
-                rFill.Size = UDim2.new(options.Default.R, 0, 1, 0)
-                rFill.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-                rFill.Parent = rSlider
-
-                local gSlider = Instance.new("TextButton")
-                gSlider.Size = UDim2.new(1, -10, 0, 10)
-                gSlider.Position = UDim2.new(0, 5, 0, 50)
-                gSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                gSlider.Text = ""
-                gSlider.Parent = colorPickerWindow
-
-                local gFill = Instance.new("Frame")
-                gFill.Size = UDim2.new(options.Default.G, 0, 1, 0)
-                gFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
-                gFill.Parent = gSlider
-
-                local bSlider = Instance.new("TextButton")
-                bSlider.Size = UDim2.new(1, -10, 0, 10)
-                bSlider.Position = UDim2.new(0, 5, 0, 80)
-                bSlider.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-                bSlider.Text = ""
-                bSlider.Parent = colorPickerWindow
-
-                local bFill = Instance.new("Frame")
-                bFill.Size = UDim2.new(options.Default.B, 0, 1, 0)
-                bFill.BackgroundColor3 = Color3.fromRGB(0, 0, 255)
-                bFill.Parent = bSlider
-
-                local rLabel = Instance.new("TextLabel")
-                rLabel.Size = UDim2.new(1, 0, 0, 20)
-                rLabel.Position = UDim2.new(0, 0, 0, 0)
-                rLabel.BackgroundTransparency = 1
-                rLabel.Text = "R: " .. math.floor(options.Default.R * 255)
-                rLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                rLabel.TextScaled = true
-                rLabel.Parent = colorPickerWindow
-
-                local gLabel = Instance.new("TextLabel")
-                gLabel.Size = UDim2.new(1, 0, 0, 20)
-                gLabel.Position = UDim2.new(0, 0, 0, 30)
-                gLabel.BackgroundTransparency = 1
-                gLabel.Text = "G: " .. math.floor(options.Default.G * 255)
-                gLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                gLabel.TextScaled = true
-                gLabel.Parent = colorPickerWindow
-
-                local bLabel = Instance.new("TextLabel")
-                bLabel.Size = UDim2.new(1, 0, 0, 20)
-                bLabel.Position = UDim2.new(0, 0, 0, 60)
-                bLabel.BackgroundTransparency = 1
-                bLabel.Text = "B: " .. math.floor(options.Default.B * 255)
-                bLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                bLabel.TextScaled = true
-                bLabel.Parent = colorPickerWindow
-
-                local function updateColor()
-                    local newColor = Color3.new(
-                        rFill.Size.X.Scale,
-                        gFill.Size.X.Scale,
-                        bFill.Size.X.Scale
-                    )
-                    colorPreview.BackgroundColor3 = newColor
-                    options.Default = newColor
-                    if options.Callback then
-                        options.Callback(newColor)
-                    end
-                end
-
-                local function createSliderHandler(slider, fill, label, component)
-                    local draggingSlider = false
-                    slider.MouseButton1Down:Connect(function()
-                        draggingSlider = true
-                    end)
-
-                    UserInputService.InputEnded:Connect(function(input)
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                            draggingSlider = false
-                        end
-                    end)
-
-                    UserInputService.InputChanged:Connect(function(input)
-                        if draggingSlider and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                            local mousePos = UserInputService:GetMouseLocation()
-                            local relativePos = mousePos - slider.AbsolutePosition
-                            local percentage = math.clamp(relativePos.X / slider.AbsoluteSize.X, 0, 1)
-                            fill.Size = UDim2.new(percentage, 0, 1, 0)
-                            label.Text = component .. ": " .. math.floor(percentage * 255)
-                            updateColor()
-                        end
-                    end)
-                end
-
-                createSliderHandler(rSlider, rFill, rLabel, "R")
-                createSliderHandler(gSlider, gFill, gLabel, "G")
-                createSliderHandler(bSlider, bFill, bLabel, "B")
-
-                colorPickerButton.MouseButton1Click:Connect(function()
-                    colorPickerWindow.Visible = not colorPickerWindow.Visible
-                end)
-            end
-
-            return tab
-        end
-
-        return window
-    end
-}
-
--- Criar Janela Principal
-local Window = RedzLib:MakeWindow({
-    Name = "Hyper Neon Hub | Blox Fruits",
+-- Criar Janela Principal com Fluent
+local Window = Fluent:CreateWindow({
+    Title = "Hyper Neon Hub | Blox Fruits",
+    SubTitle = "Update 24 - Abril 2025",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(600, 500),
+    Acrylic = false, -- Desativa blur para evitar detecção
     Theme = "Dark",
-    Icon = "rbxassetid://7072724",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 -- Criar Abas
-local FarmTab = Window:MakeTab({Name = "Farm", Icon = "rbxassetid://7072715"})
-local CombatTab = Window:MakeTab({Name = "Combate", Icon = "rbxassetid://7072724"})
-local QuestsTab = Window:MakeTab({Name = "Missões", Icon = "rbxassetid://7072715"})
-local FruitsTab = Window:MakeTab({Name = "Frutas", Icon = "rbxassetid://7072724"})
-local RaidsTab = Window:MakeTab({Name = "Raids", Icon = "rbxassetid://7072715"})
-local TeleportTab = Window:MakeTab({Name = "Teleporte", Icon = "rbxassetid://7072724"})
-local VisualsTab = Window:MakeTab({Name = "Visuais", Icon = "rbxassetid://7072715"})
-local StatsTab = Window:MakeTab({Name = "Stats", Icon = "rbxassetid://7072724"})
-local ShopTab = Window:MakeTab({Name = "Loja", Icon = "rbxassetid://7072715"})
-local MiscTab = Window:MakeTab({Name = "Diversos", Icon = "rbxassetid://7072724"})
-local AutomationTab = Window:MakeTab({Name = "Automação", Icon = "rbxassetid://7072715"})
-local EventsTab = Window:MakeTab({Name = "Eventos", Icon = "rbxassetid://7072724"})
+local Tabs = {
+    Farm = Window:AddTab({ Title = "Farm", Icon = "wheat" }),
+    Combat = Window:AddTab({ Title = "Combate", Icon = "sword" }),
+    Quests = Window:AddTab({ Title = "Missões", Icon = "scroll" }),
+    Fruits = Window:AddTab({ Title = "Frutas", Icon = "apple" }),
+    Raids = Window:AddTab({ Title = "Raids", Icon = "shield" }),
+    Teleport = Window:AddTab({ Title = "Teleporte", Icon = "map-pin" }),
+    Visuals = Window:AddTab({ Title = "Visuais", Icon = "eye" }),
+    Stats = Window:AddTab({ Title = "Stats", Icon = "bar-chart" }),
+    Shop = Window:AddTab({ Title = "Loja", Icon = "shopping-cart" }),
+    Misc = Window:AddTab({ Title = "Diversos", Icon = "settings" }),
+    Automation = Window:AddTab({ Title = "Automação", Icon = "cog" }),
+    Events = Window:AddTab({ Title = "Eventos", Icon = "calendar" }),
+    Settings = Window:AddTab({ Title = "Configurações", Icon = "settings" })
+}
+
+local Options = Fluent.Options
 
 -- Funções Utilitárias
 local function safeTeleport(cframe)
@@ -662,7 +244,7 @@ local function safeTeleport(cframe)
     end
     if #Players:GetPlayers() > 10 and Config.General.StealthMode then
         logMessage("Pausado: Servidor lotado")
-        notify("Pausado: Servidor lotado", 3)
+        notify("Hyper Neon Hub", "Pausado: Servidor lotado", 3)
         return false
     end
     local success, result = pcall(function()
@@ -683,7 +265,7 @@ local function safeTeleport(cframe)
     end)
     if not success then
         logMessage("Falha no teleporte: " .. tostring(result))
-        notify("Falha no teleporte: " .. tostring(result), 3)
+        notify("Hyper Neon Hub", "Falha no teleporte: " .. tostring(result), 3)
         return false
     end
     return true
@@ -716,7 +298,7 @@ local function panicModeCheck()
         if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * 0.3 then
             safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(0, Config.Teleport.SafeZoneHeight, 0))
             logMessage("Modo Pânico: Fugindo...")
-            notify("Modo Pânico: Fugindo...", 5)
+            notify("Hyper Neon Hub", "Modo Pânico: Fugindo...", 5)
             wait(5)
             return true
         end
@@ -746,7 +328,7 @@ local function checkStaffPresence()
     for _, player in pairs(Players:GetPlayers()) do
         if table.find(staffList, player.Name:lower()) then
             logMessage("Staff detectado: " .. player.Name)
-            notify("Staff detectado: " .. player.Name, 5)
+            notify("Hyper Neon Hub", "Staff detectado: " .. player.Name, 5)
             return true
         end
     end
@@ -791,7 +373,7 @@ local function pathfindTo(targetPosition)
         end
     else
         logMessage("Falha no pathfinding: " .. tostring(result))
-        notify("Falha no pathfinding: " .. tostring(result), 3)
+        notify("Hyper Neon Hub", "Falha no pathfinding: " .. tostring(result), 3)
         safeTeleport(CFrame.new(targetPosition))
     end
 end
@@ -803,18 +385,19 @@ local function updatePerformance()
     if currentFPS < performanceThreshold and not Config.General.PerformanceMode then
         Config.General.PerformanceMode = true
         logMessage("Modo de Desempenho ativado: FPS muito baixo")
-        notify("Modo de Desempenho ativado: FPS muito baixo", 5)
+        notify("Hyper Neon Hub", "Modo de Desempenho ativado: FPS muito baixo", 5)
     elseif currentFPS > performanceThreshold * 1.5 and Config.General.PerformanceMode then
         Config.General.PerformanceMode = false
         logMessage("Modo de Desempenho desativado")
-        notify("Modo de Desempenho desativado", 5)
+        notify("Hyper Neon Hub", "Modo de Desempenho desativado", 5)
     end
 end
 
--- Funcionalidades da Aba Farm
-FarmTab:MakeLabel({Text = "Opções de Farm"})
-FarmTab:MakeToggle({
-    Text = "Auto Farm Level",
+-- Aba Farm
+Tabs.Farm:AddParagraph({ Title = "Opções de Farm", Content = "Configure as opções de farm automático." })
+
+local AutoFarmLevelToggle = Tabs.Farm:AddToggle("AutoFarmLevel", {
+    Title = "Auto Farm Level",
     Default = Config.Farm.AutoFarmLevel,
     Callback = function(state)
         Config.Farm.AutoFarmLevel = state
@@ -838,11 +421,11 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Farm Boss",
+local AutoFarmBossToggle = Tabs.Farm:AddToggle("AutoFarmBoss", {
+    Title = "Auto Farm Boss",
     Default = Config.Farm.AutoFarmBoss,
     Callback = function(state)
         Config.Farm.AutoFarmBoss = state
@@ -867,11 +450,11 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Farm Todos os Bosses",
+local AutoFarmAllBossesToggle = Tabs.Farm:AddToggle("AutoFarmAllBosses", {
+    Title = "Auto Farm Todos os Bosses",
     Default = Config.Farm.AutoFarmAllBosses,
     Callback = function(state)
         Config.Farm.AutoFarmAllBosses = state
@@ -896,11 +479,11 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Farm Mobs",
+local AutoFarmMobsToggle = Tabs.Farm:AddToggle("AutoFarmMobs", {
+    Title = "Auto Farm Mobs",
     Default = Config.Farm.AutoFarmMobs,
     Callback = function(state)
         Config.Farm.AutoFarmMobs = state
@@ -925,11 +508,11 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Farm Material",
+local AutoFarmMaterialToggle = Tabs.Farm:AddToggle("AutoFarmMaterial", {
+    Title = "Auto Farm Material",
     Default = Config.Farm.AutoFarmMaterial,
     Callback = function(state)
         Config.Farm.AutoFarmMaterial = state
@@ -954,21 +537,22 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeSlider({
-    Text = "Limiar de Vida para Material",
+local MaterialHealthSlider = Tabs.Farm:AddSlider("MaterialHealthThreshold", {
+    Title = "Limiar de Vida para Material",
+    Description = "Percentual de vida do inimigo para farm de material",
     Min = 1,
     Max = 100,
     Default = Config.Farm.MaterialHealthThreshold,
     Callback = function(value)
         Config.Farm.MaterialHealthThreshold = value
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Farm Maestria",
+local AutoFarmMasteryToggle = Tabs.Farm:AddToggle("AutoFarmMastery", {
+    Title = "Auto Farm Maestria",
     Default = Config.Farm.AutoFarmMastery,
     Callback = function(state)
         Config.Farm.AutoFarmMastery = state
@@ -993,30 +577,32 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeSlider({
-    Text = "Limiar de Vida para Maestria",
+local MasteryHealthSlider = Tabs.Farm:AddSlider("MasteryHealthThreshold", {
+    Title = "Limiar de Vida para Maestria",
+    Description = "Percentual de vida do inimigo para farm de maestria",
     Min = 1,
     Max = 100,
     Default = Config.Farm.MasteryHealthThreshold,
     Callback = function(value)
         Config.Farm.MasteryHealthThreshold = value
-    end,
+    end
 })
 
-FarmTab:MakeDropdown({
-    Text = "Ferramenta para Maestria",
-    Options = {"Blox Fruit", "Melee", "Sword", "Gun"},
+local ToolDropdown = Tabs.Farm:AddDropdown("SelectedTool", {
+    Title = "Ferramenta para Maestria",
+    Values = {"Blox Fruit", "Melee", "Sword", "Gun"},
+    Multi = false,
     Default = Config.Farm.SelectedTool,
-    Callback = function(option)
-        Config.Farm.SelectedTool = option
-    end,
+    Callback = function(value)
+        Config.Farm.SelectedTool = value
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Coletar Baús",
+local AutoCollectChestsToggle = Tabs.Farm:AddToggle("AutoCollectChests", {
+    Title = "Auto Coletar Baús",
     Default = Config.Farm.AutoCollectChests,
     Callback = function(state)
         Config.Farm.AutoCollectChests = state
@@ -1036,11 +622,11 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Coletar Fragmentos",
+local AutoCollectFragmentsToggle = Tabs.Farm:AddToggle("AutoCollectFragments", {
+    Title = "Auto Coletar Fragmentos",
     Default = Config.Farm.AutoCollectFragments,
     Callback = function(state)
         Config.Farm.AutoCollectFragments = state
@@ -1060,11 +646,11 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FarmTab:MakeToggle({
-    Text = "Auto Farm Dinheiro",
+local AutoFarmMoneyToggle = Tabs.Farm:AddToggle("AutoFarmMoney", {
+    Title = "Auto Farm Dinheiro",
     Default = Config.Farm.AutoFarmMoney,
     Callback = function(state)
         Config.Farm.AutoFarmMoney = state
@@ -1081,13 +667,14 @@ FarmTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
--- Funcionalidades da Aba Combate
-CombatTab:MakeLabel({Text = "Opções de Combate"})
-CombatTab:MakeToggle({
-    Text = "Ataque Rápido",
+-- Aba Combate
+Tabs.Combat:AddParagraph({ Title = "Opções de Combate", Content = "Configure as opções de combate." })
+
+local FastAttackToggle = Tabs.Combat:AddToggle("FastAttack", {
+    Title = "Ataque Rápido",
     Default = Config.Combat.FastAttack,
     Callback = function(state)
         Config.Combat.FastAttack = state
@@ -1100,11 +687,11 @@ CombatTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-CombatTab:MakeToggle({
-    Text = "Habilidades Automáticas",
+local AutoSkillsToggle = Tabs.Combat:AddToggle("AutoSkills", {
+    Title = "Habilidades Automáticas",
     Default = Config.Combat.AutoSkills,
     Callback = function(state)
         Config.Combat.AutoSkills = state
@@ -1120,11 +707,11 @@ CombatTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-CombatTab:MakeToggle({
-    Text = "Aimbot",
+local AimbotToggle = Tabs.Combat:AddToggle("AimbotEnabled", {
+    Title = "Aimbot",
     Default = Config.Combat.AimbotEnabled,
     Callback = function(state)
         Config.Combat.AimbotEnabled = state
@@ -1143,31 +730,33 @@ CombatTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-CombatTab:MakeSlider({
-    Text = "Alcance do Aimbot",
+local AimbotRangeSlider = Tabs.Combat:AddSlider("AimbotRange", {
+    Title = "Alcance do Aimbot",
+    Description = "Distância máxima para o aimbot funcionar",
     Min = 10,
     Max = 100,
     Default = Config.Combat.AimbotRange,
     Callback = function(value)
         Config.Combat.AimbotRange = value
-    end,
+    end
 })
 
-CombatTab:MakeSlider({
-    Text = "Suavidade do Aimbot",
+local AimbotSmoothnessSlider = Tabs.Combat:AddSlider("AimbotSmoothness", {
+    Title = "Suavidade do Aimbot",
+    Description = "Quão suave é o movimento do aimbot (0 a 1)",
     Min = 0,
     Max = 1,
     Default = Config.Combat.AimbotSmoothness,
     Callback = function(value)
         Config.Combat.AimbotSmoothness = value
-    end,
+    end
 })
 
-CombatTab:MakeToggle({
-    Text = "ESP",
+local ESPToggle = Tabs.Combat:AddToggle("ESPEnabled", {
+    Title = "ESP",
     Default = Config.Combat.ESPEnabled,
     Callback = function(state)
         Config.Combat.ESPEnabled = state
@@ -1226,38 +815,40 @@ CombatTab:MakeToggle({
                 end
             end
         end
-    end,
+    end
 })
 
-CombatTab:MakeDropdown({
-    Text = "Tipo de ESP",
-    Options = {"Players", "Enemies"},
+local ESPTypeDropdown = Tabs.Combat:AddDropdown("ESPType", {
+    Title = "Tipo de ESP",
+    Values = {"Players", "Enemies"},
+    Multi = false,
     Default = Config.Combat.ESPType,
-    Callback = function(option)
-        Config.Combat.ESPType = option
-    end,
+    Callback = function(value)
+        Config.Combat.ESPType = value
+    end
 })
 
-CombatTab:MakeColorPicker({
-    Text = "Cor do ESP",
+local ESPColorPicker = Tabs.Combat:AddColorpicker("ESPColor", {
+    Title = "Cor do ESP",
     Default = Config.Combat.ESPColor,
-    Callback = function(color)
-        Config.Combat.ESPColor = color
-    end,
+    Callback = function(value)
+        Config.Combat.ESPColor = value
+    end
 })
 
-CombatTab:MakeSlider({
-    Text = "Distância do ESP",
+local ESPDistanceSlider = Tabs.Combat:AddSlider("ESPDistance", {
+    Title = "Distância do ESP",
+    Description = "Distância máxima para o ESP funcionar",
     Min = 100,
     Max = 5000,
     Default = Config.Combat.ESPDistance,
     Callback = function(value)
         Config.Combat.ESPDistance = value
-    end,
+    end
 })
 
-CombatTab:MakeToggle({
-    Text = "Kill Aura",
+local KillAuraToggle = Tabs.Combat:AddToggle("AutoKillAura", {
+    Title = "Kill Aura",
     Default = Config.Combat.AutoKillAura,
     Callback = function(state)
         Config.Combat.AutoKillAura = state
@@ -1278,21 +869,22 @@ CombatTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-CombatTab:MakeSlider({
-    Text = "Alcance da Kill Aura",
+local KillAuraRangeSlider = Tabs.Combat:AddSlider("KillAuraRange", {
+    Title = "Alcance da Kill Aura",
+    Description = "Distância máxima para a kill aura atacar",
     Min = 5,
     Max = 50,
     Default = Config.Combat.KillAuraRange,
     Callback = function(value)
         Config.Combat.KillAuraRange = value
-    end,
+    end
 })
 
-CombatTab:MakeToggle({
-    Text = "Esquiva Automática",
+local AutoDodgeToggle = Tabs.Combat:AddToggle("AutoDodge", {
+    Title = "Esquiva Automática",
     Default = Config.Combat.AutoDodge,
     Callback = function(state)
         Config.Combat.AutoDodge = state
@@ -1302,30 +894,32 @@ CombatTab:MakeToggle({
                     if LocalPlayer.Character.Humanoid.Health <= LocalPlayer.Character.Humanoid.MaxHealth * (Config.Combat.DodgeThreshold / 100) then
                         safeTeleport(LocalPlayer.Character.HumanoidRootPart.CFrame * CFrame.new(math.random(-10, 10), 0, math.random(-10, 10)))
                         logMessage("Esquivando...")
-                        notify("Esquivando...", 3)
+                        notify("Hyper Neon Hub", "Esquivando...", 3)
                         wait(randomDelay)
                     end
                     wait(0.1)
                 end
             end)
         end
-    end,
+    end
 })
 
-CombatTab:MakeSlider({
-    Text = "Limiar de Vida para Esquiva",
+local DodgeThresholdSlider = Tabs.Combat:AddSlider("DodgeThreshold", {
+    Title = "Limiar de Vida para Esquiva",
+    Description = "Percentual de vida para ativar a esquiva",
     Min = 1,
     Max = 100,
     Default = Config.Combat.DodgeThreshold,
     Callback = function(value)
         Config.Combat.DodgeThreshold = value
-    end,
+    end
 })
 
--- Funcionalidades da Aba Missões
-QuestsTab:MakeLabel({Text = "Opções de Missões"})
-QuestsTab:MakeToggle({
-    Text = "Auto Quest",
+-- Aba Missões
+Tabs.Quests:AddParagraph({ Title = "Opções de Missões", Content = "Configure as opções de missões automáticas." })
+
+local AutoQuestToggle = Tabs.Quests:AddToggle("AutoQuest", {
+    Title = "Auto Quest",
     Default = Config.Quests.AutoQuest,
     Callback = function(state)
         Config.Quests.AutoQuest = state
@@ -1341,11 +935,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Dojo Quest",
+local AutoDojoQuestToggle = Tabs.Quests:AddToggle("AutoDojoQuest", {
+    Title = "Auto Dojo Quest",
     Default = Config.Quests.AutoDojoQuest,
     Callback = function(state)
         Config.Quests.AutoDojoQuest = state
@@ -1361,11 +955,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Draco Race",
+local AutoDracoRaceToggle = Tabs.Quests:AddToggle("AutoDracoRace", {
+    Title = "Auto Draco Race",
     Default = Config.Quests.AutoDracoRace,
     Callback = function(state)
         Config.Quests.AutoDracoRace = state
@@ -1381,11 +975,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Race V4",
+local AutoRaceV4Toggle = Tabs.Quests:AddToggle("AutoRaceV4", {
+    Title = "Auto Race V4",
     Default = Config.Quests.AutoRaceV4,
     Callback = function(state)
         Config.Quests.AutoRaceV4 = state
@@ -1401,11 +995,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Trial",
+local AutoTrialToggle = Tabs.Quests:AddToggle("AutoTrial", {
+    Title = "Auto Trial",
     Default = Config.Quests.AutoTrial,
     Callback = function(state)
         Config.Quests.AutoTrial = state
@@ -1421,11 +1015,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Awakening",
+local AutoAwakeningToggle = Tabs.Quests:AddToggle("AutoAwakening", {
+    Title = "Auto Awakening",
     Default = Config.Quests.AutoAwakening,
     Callback = function(state)
         Config.Quests.AutoAwakening = state
@@ -1441,11 +1035,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Pole",
+local AutoPoleToggle = Tabs.Quests:AddToggle("AutoPole", {
+    Title = "Auto Pole",
     Default = Config.Quests.AutoPole,
     Callback = function(state)
         Config.Quests.AutoPole = state
@@ -1461,11 +1055,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Saber",
+local AutoSaberToggle = Tabs.Quests:AddToggle("AutoSaber", {
+    Title = "Auto Saber",
     Default = Config.Quests.AutoSaber,
     Callback = function(state)
         Config.Quests.AutoSaber = state
@@ -1481,11 +1075,11 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-QuestsTab:MakeToggle({
-    Text = "Auto Saw Sword",
+local AutoSawSwordToggle = Tabs.Quests:AddToggle("AutoSawSword", {
+    Title = "Auto Saw Sword",
     Default = Config.Quests.AutoSawSword,
     Callback = function(state)
         Config.Quests.AutoSawSword = state
@@ -1501,13 +1095,14 @@ QuestsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
--- Funcionalidades da Aba Frutas
-FruitsTab:MakeLabel({Text = "Opções de Frutas"})
-FruitsTab:MakeToggle({
-    Text = "Auto Coletar Frutas",
+-- Aba Frutas
+Tabs.Fruits:AddParagraph({ Title = "Opções de Frutas", Content = "Configure as opções de gerenciamento de frutas." })
+
+local AutoCollectFruitsToggle = Tabs.Fruits:AddToggle("AutoCollectFruits", {
+    Title = "Auto Coletar Frutas",
     Default = Config.Fruits.AutoCollectFruits,
     Callback = function(state)
         Config.Fruits.AutoCollectFruits = state
@@ -1527,11 +1122,11 @@ FruitsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FruitsTab:MakeToggle({
-    Text = "Auto Armazenar Frutas",
+local AutoStoreFruitsToggle = Tabs.Fruits:AddToggle("AutoStoreFruits", {
+    Title = "Auto Armazenar Frutas",
     Default = Config.Fruits.AutoStoreFruits,
     Callback = function(state)
         Config.Fruits.AutoStoreFruits = state
@@ -1547,11 +1142,11 @@ FruitsTab:MakeToggle({
                 end
             end)
         end
-    end,
+    end
 })
 
-FruitsTab:MakeToggle({
-    Text = "Auto Fruta Aleatória",
+local AutoRandomFruitToggle = Tabs.Fruits:AddToggle("AutoRandomFruit", {
+    Title = "Auto Fruta Aleatória",
     Default = Config.Fruits.AutoRandomFruit,
     Callback = function(state)
         Config.Fruits.AutoRandomFruit = state
@@ -1565,4 +1160,329 @@ FruitsTab:MakeToggle({
                     end)
                     wait(randomDelay)
                 end
-            end
+            end)
+        end
+    end
+})
+
+local FruitSniperToggle = Tabs.Fruits:AddToggle("FruitSniper", {
+    Title = "Fruit Sniper",
+    Default = Config.Fruits.FruitSniper,
+    Callback = function(state)
+        Config.Fruits.FruitSniper = state
+        if state then
+            spawn(function()
+                while Config.Fruits.FruitSniper and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, fruit in pairs(workspace:GetChildren()) do
+                        if fruit:IsA("Tool") and string.find(fruit.Name, "Fruit") and (string.find(fruit.Name, "Dragon") or string.find(fruit.Name, "Leopard")) then
+                            pathfindTo(fruit.Handle.Position)
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Procurando frutas valiosas...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local AutoGasFruitToggle = Tabs.Fruits:AddToggle("AutoGasFruit", {
+    Title = "Auto Gas Fruit",
+    Default = Config.Fruits.AutoGasFruit,
+    Callback = function(state)
+        Config.Fruits.AutoGasFruit = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoGasFruit and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, fruit in pairs(workspace:GetChildren()) do
+                        if fruit:IsA("Tool") and string.find(fruit.Name, "Gas Fruit") then
+                            pathfindTo(fruit.Handle.Position)
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Procurando Gas Fruit...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local AutoDragonTokensToggle = Tabs.Fruits:AddToggle("AutoDragonTokens", {
+    Title = "Auto Dragon Tokens",
+    Default = Config.Fruits.AutoDragonTokens,
+    Callback = function(state)
+        Config.Fruits.AutoDragonTokens = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoDragonTokens and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, token in pairs(workspace:GetChildren()) do
+                        if token:IsA("Model") and string.find(token.Name, "Dragon Token") then
+                            pathfindTo(token:GetPrimaryPart().Position)
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Coletando Dragon Tokens...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local AutoFruitMasteryToggle = Tabs.Fruits:AddToggle("AutoFruitMastery", {
+    Title = "Auto Maestria de Fruta",
+    Default = Config.Fruits.AutoFruitMastery,
+    Callback = function(state)
+        Config.Fruits.AutoFruitMastery = state
+        if state then
+            spawn(function()
+                while Config.Fruits.AutoFruitMastery and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 and enemy.Humanoid.Health <= enemy.Humanoid.MaxHealth * (Config.Fruits.FruitMasteryThreshold / 100) then
+                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if distance > 50 then
+                                pathfindTo(enemy.HumanoidRootPart.Position)
+                            else
+                                attackEnemy(enemy)
+                            end
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Farmando maestria de fruta...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local FruitMasterySlider = Tabs.Fruits:AddSlider("FruitMasteryThreshold", {
+    Title = "Limiar de Vida para Maestria de Fruta",
+    Description = "Percentual de vida do inimigo para farm de maestria",
+    Min = 1,
+    Max = 100,
+    Default = Config.Fruits.FruitMasteryThreshold,
+    Callback = function(value)
+        Config.Fruits.FruitMasteryThreshold = value
+    end
+})
+
+-- Aba Raids
+Tabs.Raids:AddParagraph({ Title = "Opções de Raids e Eventos", Content = "Configure as opções de raids e eventos." })
+
+local AutoRaidToggle = Tabs.Raids:AddToggle("AutoRaid", {
+    Title = "Auto Raid",
+    Default = Config.Raids.AutoRaid,
+    Callback = function(state)
+        Config.Raids.AutoRaid = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoRaid and LocalPlayer.Character do
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("StartRaid", Config.Raids.SelectedRaid)
+                        end
+                    end)
+                    wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+local RaidTypeDropdown = Tabs.Raids:AddDropdown("SelectedRaid", {
+    Title = "Tipo de Raid",
+    Values = {"Normal", "Hard", "Nightmare"},
+    Multi = false,
+    Default = Config.Raids.SelectedRaid,
+    Callback = function(value)
+        Config.Raids.SelectedRaid = value
+    end
+})
+
+local AutoSeaEventToggle = Tabs.Raids:AddToggle("AutoSeaEvent", {
+    Title = "Auto Sea Event",
+    Default = Config.Raids.AutoSeaEvent,
+    Callback = function(state)
+        Config.Raids.AutoSeaEvent = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoSeaEvent and LocalPlayer.Character do
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("SeaEvent")
+                        end
+                    end)
+                    wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+local AutoTerrorsharkToggle = Tabs.Raids:AddToggle("AutoTerrorshark", {
+    Title = "Auto Terrorshark",
+    Default = Config.Raids.AutoTerrorshark,
+    Callback = function(state)
+        Config.Raids.AutoTerrorshark = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoTerrorshark and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and string.find(enemy.Name, "Terrorshark") then
+                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if distance > 50 then
+                                pathfindTo(enemy.HumanoidRootPart.Position)
+                            else
+                                attackEnemy(enemy)
+                            end
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Caçando Terrorshark...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local AutoMirageIslandToggle = Tabs.Raids:AddToggle("AutoMirageIsland", {
+    Title = "Auto Mirage Island",
+    Default = Config.Raids.AutoMirageIsland,
+    Callback = function(state)
+        Config.Raids.AutoMirageIsland = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoMirageIsland and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, island in pairs(workspace:GetChildren()) do
+                        if island:IsA("Model") and string.find(island.Name, "Mirage Island") then
+                            pathfindTo(island:GetPrimaryPart().Position)
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Procurando Mirage Island...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local AutoKitsuneEventToggle = Tabs.Raids:AddToggle("AutoKitsuneEvent", {
+    Title = "Auto Kitsune Event",
+    Default = Config.Raids.AutoKitsuneEvent,
+    Callback = function(state)
+        Config.Raids.AutoKitsuneEvent = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoKitsuneEvent and LocalPlayer.Character do
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("KitsuneEvent")
+                        end
+                    end)
+                    wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+local AutoLeviathanToggle = Tabs.Raids:AddToggle("AutoLeviathan", {
+    Title = "Auto Leviathan",
+    Default = Config.Raids.AutoLeviathan,
+    Callback = function(state)
+        Config.Raids.AutoLeviathan = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoLeviathan and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    for _, enemy in pairs(workspace.Enemies:GetChildren()) do
+                        if enemy:IsA("Model") and string.find(enemy.Name, "Leviathan") then
+                            local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                            if distance > 50 then
+                                pathfindTo(enemy.HumanoidRootPart.Position)
+                            else
+                                attackEnemy(enemy)
+                            end
+                            wait(randomDelay)
+                        end
+                    end
+                    logMessage("Caçando Leviathan...")
+                    mimicBehavior()
+                    wait(0.1)
+                end
+            end)
+        end
+    end
+})
+
+local AutoDragonEventToggle = Tabs.Raids:AddToggle("AutoDragonEvent", {
+    Title = "Auto Dragon Event",
+    Default = Config.Raids.AutoDragonEvent,
+    Callback = function(state)
+        Config.Raids.AutoDragonEvent = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoDragonEvent and LocalPlayer.Character do
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("DragonEvent")
+                        end
+                    end)
+                    wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+local AutoHydraEventToggle = Tabs.Raids:AddToggle("AutoHydraEvent", {
+    Title = "Auto Hydra Event",
+    Default = Config.Raids.AutoHydraEvent,
+    Callback = function(state)
+        Config.Raids.AutoHydraEvent = state
+        if state then
+            spawn(function()
+                while Config.Raids.AutoHydraEvent and LocalPlayer.Character do
+                    pcall(function()
+                        if ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("CommF_") then
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("HydraEvent")
+                        end
+                    end)
+                    wait(randomDelay)
+                end
+            end)
+        end
+    end
+})
+
+-- Aba Teleporte
+Tabs.Teleport:AddParagraph({ Title = "Opções de Teleporte", Content = "Configure as opções de teleporte." })
+
+local AutoTeleportToggle = Tabs.Teleport:AddToggle("AutoTeleport", {
+    Title = "Auto Teleport",
+    Default = Config.Teleport.AutoTeleport,
+    Callback = function(state)
+        Config.Teleport.AutoTeleport = state
+        if state then
+            spawn(function()
+                while Config.Teleport.AutoTeleport and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") do
+                    if panicModeCheck() or (checkCrowdedServer() and Config.Misc.SafeMode) or (Config.General.StealthMode and checkStaffPresence()) or checkProximity() then wait(1) continue end
+                    local islandPositions = {
+                        ["
